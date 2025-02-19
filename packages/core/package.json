@@ -1,5 +1,5 @@
 {
-  "name": "@fluxo/core",
+  "name": "@fluxo-engine/core",
   "version": "1.0.0",
   "description": "fluxo workflow engine core",
   "main": "dist/index.js",
