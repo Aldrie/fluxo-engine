@@ -1,4 +1,4 @@
-# **@Fluxo**
+# **@fluxo-engine**
 *A flexible, modular, fast, and lightweight workflow engine.*  
 
 Fluxo is a powerful framework designed for building and executing workflows using a node-based architecture. It enables seamless process automation by connecting nodes and edges (via handles), ensuring efficiency, scalability, and adaptability.
@@ -173,5 +173,13 @@ The **Loop Executor** (`isLoopExecutor: true`) has a unique execution pattern:
 - **Efficient:** Minimal overhead ensures fast execution of workflows.  
 - **Scalable:** Capable of handling both simple and complex workflow scenarios.  
 - **Precise Data Mapping:** Use handles (`sourceValue` and `targetValue`) to clearly define how outputs feed into inputs across nodes.
+
+## Roadmap
+
+- [ ] **📄 Enhanced Documentation**  
+  Improve the documentation with more detailed guides, examples, and installation instructions.
+
+- [ ] **🦀 Rust Integration for Better Performance**  
+  Explore and integrate Rust modules to optimize critical parts of the engine and boost performance.
 
 <img src="https://media.tenor.com/sbfBfp3FeY8AAAAj/oia-uia.gif" width="100" alt="Fluxo Animation"/>
