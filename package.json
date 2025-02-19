@@ -2,7 +2,6 @@
   "name": "fluxo",
   "version": "1.0.0",
   "description": "A flexible, modular, fast, and lightweight workflow engine",
-  "private": true,
   "workspaces": [
     "packages/*"
   ],
