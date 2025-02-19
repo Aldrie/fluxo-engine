@@ -10,4 +10,5 @@ export interface Flow<NodeTypes = UnknowEnum, InitalData = unknown> {
 
 export interface FlowHandlerOptions<NodeType extends UnknowEnum> {
   executors: Executor<NodeType>[];
+  enableLogger?: boolean;
 }

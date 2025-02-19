@@ -9,11 +9,11 @@ export type Node<
   id: string;
   isLoop?: boolean;
   type: Type;
-  inputMap: Input;
-  outputMap: Output;
 
   input: ConvertValuesToObject<Input>;
   output: ConvertValuesToObject<Output>;
 
   data?: Record<string, unknown>;
+
+  defaultInput?: any;
 };
