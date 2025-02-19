@@ -1,7 +1,9 @@
-# **@Fluxo** 🚀  
+# **@Fluxo**
 *A flexible, modular, fast, and lightweight workflow engine.*  
 
 Fluxo is a powerful framework designed for building and executing workflows using a node-based architecture. It enables seamless process automation by connecting nodes and edges (via handles), ensuring efficiency, scalability, and adaptability.
+
+See on [GitHub](https://github.com/Aldrie/fluxo).
 
 ## **Features**  
 🧩 **Modular Execution** – Define custom executors for different node types.

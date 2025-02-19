@@ -1,6 +1,6 @@
 {
   "name": "@fluxo-engine/core",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "fluxo workflow engine core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,6 +14,10 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aldrie/fluxo.git"
   },
   "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
