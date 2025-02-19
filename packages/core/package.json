@@ -4,11 +4,16 @@
   "description": "fluxo workflow engine core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
     "dev": "tsc --watch",
     "transpile": "swc src -d dist --config-file --strip-leading-paths .swcrc",
     "types": "tsc --emitDeclarationOnly",
-    "build": "run-s transpile types"
+    "build": "run-s transpile types",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
