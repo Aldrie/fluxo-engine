@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "lint": "eslint --fix",
-    "dev": "pnpm --filter @fluxo/* run dev",
-    "build": "pnpm --filter @fluxo/* run build"
+    "dev": "pnpm --filter @fluxo-engine/* run dev",
+    "build": "pnpm --filter @fluxo-engine/* run build"
   },
   "keywords": [
     "fluxo",
