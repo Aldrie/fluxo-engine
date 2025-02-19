@@ -2,14 +2,14 @@
   "name": "fluxo",
   "version": "1.0.0",
   "description": "A flexible, modular, fast, and lightweight workflow engine",
+  "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "lint": "eslint --fix",
     "dev": "pnpm --filter @fluxo/* run dev",
-    "build": "pnpm --filter @fluxo/* run build",
-    "prepublishOnly": "run-s build"
+    "build": "pnpm --filter @fluxo/* run build"
   },
   "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
