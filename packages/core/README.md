@@ -29,9 +29,10 @@ pnpm add @fluxo-engine/core
 
 ```ts
 import { NodeExecutor } from '@fluxo-engine/core';
+import { NodeTypes } from './types';
 
-const simpleExecutor: NodeExecutor<'simple'> = {
-  type: 'simple',
+const simpleExecutor: NodeExecutor<NodeTypes> = {
+  type: NodeTypes.SIMPLE,
   async execute(input, data) {
     // Process the input and return output
     return { result: (input.num0 as number) + (input.num1 as number) };
@@ -45,9 +46,10 @@ const simpleExecutor: NodeExecutor<'simple'> = {
 
 ```ts
 import { LoopNodeExecutor } from '@fluxo-engine/core';
+import { NodeTypes } from './types';
 
-const loopExecutor: LoopNodeExecutor<'loop'> = {
-  type: 'loop',
+const loopExecutor: LoopNodeExecutor<NodeTypes> = {
+  type: NodeTypes.LOOP,
   isLoopExecutor: true,
   async getArray(input, data, iteration) {
     // Generate an array of outputs to iterate over
@@ -64,9 +66,10 @@ You can also define executors as classes by implementing the respective interfac
 
 ```ts
 import { NodeExecutor } from '@fluxo-engine/core';
+import { NodeTypes } from './types';
 
-class SimpleNodeExecutor implements NodeExecutor<'simple'> {
-  type = 'simple';
+class SimpleNodeExecutor implements NodeExecutor<NodeTypes> {
+  type = NodeTypes.SIMPLE;
 
   async execute(input: { num0: number; num1: number }, data: Record<string, unknown>) {
     // Execute node logic and return output
@@ -82,9 +85,10 @@ export const simpleNodeExecutor = new SimpleNodeExecutor();
 
 ```ts
 import { LoopNodeExecutor } from '@fluxo-engine/core';
+import { NodeTypes } from './types';
 
-class SimpleLoopExecutor implements LoopNodeExecutor<'loop'> {
-  type = 'loop';
+class SimpleLoopExecutor implements LoopNodeExecutor<NodeTypes> {
+  type = NodeTypes.LOOP;
   isLoopExecutor = true;
 
   async getArray(
@@ -117,6 +121,11 @@ import { getFlowHandler } from '@fluxo-engine/core';
 import { simpleNodeExecutor } from './SimpleNodeExecutor'; // class-based
 import { simpleLoopExecutor } from './SimpleLoopExecutor'; // class-based
 
+enum NodeTypes {
+  SUM = 'sum',
+  NUMBER_TO_STRING = 'number_to_string',
+};
+
 // Define flow handler with your executors (you can mix function-based and class-based)
 const flowHandler = getFlowHandler({
   executors: [simpleNodeExecutor, simpleLoopExecutor],
@@ -127,13 +136,13 @@ const flowHandler = getFlowHandler({
 const nodes = [
   {
     id: 'sum',
-    type: 'simple',
+    type: NodeTypes.SUM,
     input: { num0: 5, num1: 7 },
     output: {},
   },
   {
     id: 'number_to_string',
-    type: 'simple',
+    type: NodeTypes.NUMBER_TO_STRING,
     input: { number: null }, // value will be set via edge mapping
     output: {},
   },
