@@ -1,17 +1,16 @@
 {
   "name": "@fluxo/core",
   "version": "1.0.0",
-  "description": "",
+  "description": "fluxo workflow engine core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc"
+    "transpile": "swc src -d dist --config-file --strip-leading-paths .swcrc",
+    "types": "tsc --emitDeclarationOnly",
+    "build": "run-s transpile types"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "frontend": "link:C:/Projects/personal/fluxo-poc/packages/frontend"
-  }
+  "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
+  "author": "Aldriê <aldriemizobuti@outlook.com>",
+  "license": "ISC"
 }
