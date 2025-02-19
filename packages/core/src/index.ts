@@ -6,13 +6,35 @@ export * from './types/flow';
 export * from './types/node';
 export * from './types/value';
 
-import { executeFlow } from './flow';
 import getLogger, { setIsLoggerEnabled } from './logger';
+import { executeNode, getInitialNodeIds, getSortedNodes } from './node';
+
 import { ValueTypes } from './types/enums/ValueTypes';
 import { Flow, FlowHandlerOptions } from './types/flow';
 import { ConvertValuesToObject, Value } from './types/value';
 
 const log = getLogger('Index');
+
+export async function executeFlow<NodeType extends UnknowEnum>({
+  executors,
+  nodes,
+  edges,
+  executedNodeOutputs,
+}: Flow<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>> &
+  FlowHandlerOptions<NodeType> & {
+    executedNodeOutputs: ExecutedNodeOutputs;
+  }) {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  const sortedNodes = getSortedNodes(nodes, edges);
+  log('sortedNodes', sortedNodes);
+  const initialNodeIds = getInitialNodeIds(sortedNodes, edges);
+
+  for (const nodeId of initialNodeIds) {
+    const node = nodeMap.get(nodeId)!;
+    await executeNode(node, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
+  }
+}
 
 export function getFlowHandler<NodeType extends UnknowEnum>({
   executors,

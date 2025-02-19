@@ -1,15 +1,17 @@
 {
   "name": "@fluxo-engine/core",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "fluxo workflow engine core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsc --watch",
-    "transpile": "swc src -d dist --config-file --strip-leading-paths .swcrc",
+    "bundle": "rollup -c",
     "types": "tsc --emitDeclarationOnly",
-    "build": "run-s transpile types",
+    "build": "run-s bundle types",
     "prepublishOnly": "pnpm build"
   },
   "publishConfig": {
@@ -19,7 +21,15 @@
     "type": "git",
     "url": "https://github.com/Aldrie/fluxo.git"
   },
-  "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
+  "keywords": [
+    "fluxo",
+    "workflow",
+    "engine",
+    "core",
+    "node",
+    "low-code",
+    "typescript"
+  ],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
   "license": "ISC"
 }

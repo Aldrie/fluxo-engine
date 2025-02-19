@@ -11,12 +11,26 @@
     "dev": "pnpm --filter @fluxo/* run dev",
     "build": "pnpm --filter @fluxo/* run build"
   },
-  "keywords": ["fluxo", "workflow", "engine", "core", "node", "low-code", "typescript"],
+  "keywords": [
+    "fluxo",
+    "workflow",
+    "engine",
+    "core",
+    "node",
+    "low-code",
+    "typescript"
+  ],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
   "license": "ISC",
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.19.0",
+    "@parcel/packager-ts": "2.13.3",
+    "@parcel/transformer-typescript-types": "2.13.3",
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-swc": "^0.4.0",
+    "@rollup/plugin-typescript": "^12.1.2",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.18",
     "eslint-config-prettier": "^10.0.1",
@@ -26,6 +40,8 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "rollup": "^4.34.8",
+    "tslib": "^2.8.1",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.21.0"
   }
