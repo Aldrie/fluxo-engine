@@ -1,6 +1,7 @@
 import swc from '@rollup/plugin-swc';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import terser from '@rollup/plugin-terser';
 
 export default {
   input: 'src/index.ts',
@@ -27,8 +28,22 @@ export default {
           },
           target: 'es2020',
           baseUrl: './src',
+          minify: {
+            compress: true,
+            mangle: true,
+          },
         },
         minify: true,
+      },
+    }),
+    terser({
+      compress: {
+        passes: 3,
+        drop_console: false,
+        drop_debugger: true,
+      },
+      format: {
+        comments: false,
       },
     }),
   ],
