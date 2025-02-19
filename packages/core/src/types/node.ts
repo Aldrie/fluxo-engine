@@ -1,3 +1,4 @@
+import { UnknowEnum } from './core';
 import { ValueTypes } from './enums/ValueTypes';
 import { ConvertValuesToObject, Value } from './value';
 

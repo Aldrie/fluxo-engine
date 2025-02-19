@@ -8,6 +8,7 @@ export * from './types/value';
 
 import getLogger, { setIsLoggerEnabled } from './logger';
 import { executeNode, getInitialNodeIds, getSortedNodes } from './node';
+import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 
 import { ValueTypes } from './types/enums/ValueTypes';
 import { Flow, FlowHandlerOptions } from './types/flow';

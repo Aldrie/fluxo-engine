@@ -13,6 +13,6 @@
     "paths": {
       "@fluxo/core": ["packages/core/src"],
       "@fluxo/react": ["packages/react/src"]
-    }
+    },
   }
 }

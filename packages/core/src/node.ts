@@ -1,5 +1,6 @@
 import { getSubFlow } from './flow';
 import getLogger from './logger';
+import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { Edge } from './types/edge';
 import { Executor, NodeExecutor } from './types/executor';
 import { Node } from './types/node';
@@ -171,7 +172,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     if (iteration !== undefined) {
       executedNodeOutputs.set(`${node.id}_${iteration}`, output);
-      let aggregated = executedNodeOutputs.get(node.id) || [];
+      let aggregated = (executedNodeOutputs.get(node.id) || []) as any;
       if (!Array.isArray(aggregated)) aggregated = [];
       aggregated[iteration] = output;
       executedNodeOutputs.set(node.id, aggregated);

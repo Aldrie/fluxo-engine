@@ -1,3 +1,4 @@
+import { UnknowEnum } from './core';
 import { Node } from './node';
 
 interface BaseExecutor<Enum extends UnknowEnum> {
