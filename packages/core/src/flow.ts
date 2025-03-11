@@ -1,10 +1,14 @@
+import { isLoopNode } from './node';
+import { UnknowEnum } from './types/core';
 import { Edge } from './types/edge';
+import { Executor } from './types/executor';
 import { Node } from './types/node';
 
 export function getSubFlow(
   loopNode: Node,
   allNodes: Node[],
-  edges: Edge[]
+  edges: Edge[],
+  executors: Executor<UnknowEnum>[] = []
 ): {
   subFlowNodes: Node[];
   resumeNodes: Node[];
@@ -25,7 +29,7 @@ export function getSubFlow(
       subFlowNodes.push(child);
       dfs(child);
 
-      if (!child.isLoop) {
+      if (!isLoopNode(child, executors)) {
         resumeNodes.push(child);
       }
     }

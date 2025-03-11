@@ -1,6 +1,7 @@
 export * from './flow';
 export * from './types/edge';
 export * from './types/enums/ValueTypes';
+export * from './types/enums/ExecutorBehavior';
 export * from './types/executor';
 export * from './types/flow';
 export * from './types/node';
@@ -27,7 +28,7 @@ export async function executeFlow<NodeType extends UnknowEnum>({
   }) {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
-  const sortedNodes = getSortedNodes(nodes, edges);
+  const sortedNodes = getSortedNodes(nodes, edges, executors);
   log('sortedNodes', sortedNodes);
   const initialNodeIds = getInitialNodeIds(sortedNodes, edges);
 

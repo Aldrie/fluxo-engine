@@ -1,8 +1,10 @@
+import { isBranchEdge } from './edge';
 import { getSubFlow } from './flow';
 import getLogger from './logger';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-import { Edge } from './types/edge';
-import { Executor, NodeExecutor } from './types/executor';
+import { BranchEdge, Edge } from './types/edge';
+import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
+import { BranchExecutor, Executor, NodeExecutor } from './types/executor';
 import { Node } from './types/node';
 import { isObjectEmpty } from './utils/object';
 
@@ -12,7 +14,16 @@ function createNodeMap(nodes: Node[]): Map<string, Node> {
   return new Map(nodes.map((n) => [n.id, n]));
 }
 
-function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
+export function isLoopNode(node: Node, executors: Executor<UnknowEnum>[]) {
+  const foundExecutor = executors.find((e) => e.type === node.type);
+  return foundExecutor?.behavior === ExecutorBehavior.LOOP;
+}
+
+function topologicalSort(
+  nodes: Node[],
+  edges: Edge[],
+  executors: Executor<UnknowEnum>[] = []
+): string[] {
   const nodeMap = createNodeMap(nodes);
   const adjacencyList: Record<string, string[]> = {};
   const inDegree: Record<string, number> = {};
@@ -33,7 +44,10 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
     .sort((a, b) => {
       const nodeA = nodeMap.get(a)!;
       const nodeB = nodeMap.get(b)!;
-      return nodeA.isLoop === nodeB.isLoop ? 0 : nodeA.isLoop ? 1 : -1;
+      const nodeAIsLoop = isLoopNode(nodeA, executors);
+      const nodeBIsLoop = isLoopNode(nodeB, executors);
+
+      return nodeAIsLoop === nodeBIsLoop ? 0 : nodeAIsLoop ? 1 : -1;
     });
 
   const sortedOrder: string[] = [];
@@ -52,7 +66,10 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
     queue.sort((a, b) => {
       const nodeA = nodeMap.get(a)!;
       const nodeB = nodeMap.get(b)!;
-      return nodeA.isLoop === nodeB.isLoop ? 0 : nodeA.isLoop ? 1 : -1;
+      const nodeAIsLoop = isLoopNode(nodeA, executors);
+      const nodeBIsLoop = isLoopNode(nodeB, executors);
+
+      return nodeAIsLoop === nodeBIsLoop ? 0 : nodeAIsLoop ? 1 : -1;
     });
   }
 
@@ -63,8 +80,12 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
   return sortedOrder;
 }
 
-export function getSortedNodes(nodes: Node[], edges: Edge[]): Node[] {
-  const sortedOrder = topologicalSort(nodes, edges);
+export function getSortedNodes(
+  nodes: Node[],
+  edges: Edge[],
+  executors: Executor<UnknowEnum>[]
+): Node[] {
+  const sortedOrder = topologicalSort(nodes, edges, executors);
   const nodeMap = createNodeMap(nodes);
   return sortedOrder.map((id) => nodeMap.get(id)!).filter(Boolean);
 }
@@ -93,7 +114,7 @@ function mapNodeOuputsToInput(
   executedNodes: ExecutedNodeOutputs,
   iteration?: number
 ) {
-  const inputEdges = edges.filter((edge) => edge.target === node.id);
+  const inputEdges = edges.filter((edge) => edge.target === node.id && !isBranchEdge(edge)); 
   const input = {} as (typeof node)['input'];
 
   for (const edge of inputEdges) {
@@ -211,7 +232,28 @@ export async function executeNode<NodeType extends UnknowEnum>(
   const executor = executors.find((e) => e.type === node.type);
   if (!executor) throw new Error(`No executor found for ${node.type}`);
 
-  if (executor.isLoopExecutor) {
+  if(executor?.behavior === ExecutorBehavior.BRANCH) {
+    const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
+    const branchDecision = await (executor as BranchExecutor<NodeType>).executeBranch(input, node.data);
+    
+    const decisionKey = branchDecision ? executor.getTrueKey() : executor.getFalseKey();
+    const nextEdge = edges.find(edge => isBranchEdge(edge) && edge.branch === decisionKey);
+
+    if (!nextEdge) {
+      throw new Error(`No outgoing edge found for branch decision: ${decisionKey}`);
+    }
+    
+    const nextNode = sortedNodes.find(n => n.id === nextEdge.target);
+    
+    if (!nextNode) {
+      throw new Error(`No node found for id ${nextEdge.target}`);
+    }
+    
+    executedNodeOutputs.set(node.id, { result: branchDecision});
+    
+    await executeNode(nextNode, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
+    return branchDecision;
+  } else if (executor?.behavior === ExecutorBehavior.LOOP) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
     const loopResult = await executor.getArray(input, node.data, iteration);
     log('loopResult:', loopResult);
