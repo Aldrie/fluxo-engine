@@ -116,8 +116,8 @@ The edge will connect the `result` handle of the "sum" node to the `number` hand
 
 ```ts
 import { getFlowHandler } from '@fluxo-engine/core';
-import { simpleNodeExecutor } from './SimpleNodeExecutor'; // class-based
-import { simpleLoopExecutor } from './SimpleLoopExecutor'; // class-based
+import { sumExecutor } from './SumExecutor'; // class-based
+import { numberToStringExecutor } from './NumberToStringExecutor'; // class-based
 
 enum NodeTypes {
   SUM = 'sum',
@@ -126,7 +126,7 @@ enum NodeTypes {
 
 // Define flow handler with your executors (you can mix function-based and class-based)
 const flowHandler = getFlowHandler({
-  executors: [simpleNodeExecutor, simpleLoopExecutor],
+  executors: [sumExecutor, numberToStringExecutor],
   enableLogger: true,
 });
 
