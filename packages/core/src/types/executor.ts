@@ -24,4 +24,7 @@ export interface BranchExecutor<Enum extends UnknowEnum> extends BaseExecutor<En
   getFalseKey(): string;
 }
 
-export type Executor<Enum extends UnknowEnum> = LoopNodeExecutor<Enum> | NodeExecutor<Enum> | BranchExecutor<Enum>;
+export type Executor<Enum extends UnknowEnum> =
+  | LoopNodeExecutor<Enum>
+  | NodeExecutor<Enum>
+  | BranchExecutor<Enum>;

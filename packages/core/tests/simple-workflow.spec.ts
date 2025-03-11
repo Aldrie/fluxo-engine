@@ -11,10 +11,10 @@ let flowHandler: ReturnType<typeof getFlowHandler>;
 beforeAll(() => {
   outputServiceMock = new OutputServiceMock();
 
-  flowHandler = getFlowHandler<NodeType>({ 
-    executors: [new ValueExecutor(), new SumExecutor(), new SaveOutputExecutor(outputServiceMock)]
-   }) as ReturnType<typeof getFlowHandler>;
-})
+  flowHandler = getFlowHandler<NodeType>({
+    executors: [new ValueExecutor(), new SumExecutor(), new SaveOutputExecutor(outputServiceMock)],
+  }) as ReturnType<typeof getFlowHandler>;
+});
 
 describe('simple-workflow', () => {
   it('should sum two numbers', async () => {
@@ -23,7 +23,13 @@ describe('simple-workflow', () => {
         { id: 'value_0', type: NodeType.VALUE, input: {}, output: {}, data: { value: 3 } },
         { id: 'value_1', type: NodeType.VALUE, input: {}, output: {}, data: { value: 2 } },
         { id: 'sum', type: NodeType.SUM, input: {}, output: {} },
-        { id: 'save-output', type: NodeType.SAVE_OUTPUT, input: {}, output: {}, data: { key: 'sumResult' } },
+        {
+          id: 'save-output',
+          type: NodeType.SAVE_OUTPUT,
+          input: {},
+          output: {},
+          data: { key: 'sumResult' },
+        },
       ],
       edges: [
         { source: 'value_0', target: 'sum', sourceValue: 'value', targetValue: 'num0' },

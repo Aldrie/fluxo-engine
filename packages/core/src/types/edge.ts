@@ -1,7 +1,7 @@
 type Common = {
   source: string;
   target: string;
-}
+};
 
 export type BaseEdge = Common & {
   sourceValue?: string;

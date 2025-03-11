@@ -1,4 +1,4 @@
-import { BranchExecutor, ExecutorBehavior, LoopNodeExecutor, Node, NodeExecutor } from '../../src';
+import { BranchExecutor, ExecutorBehavior } from '../../src';
 import { NodeType } from './enums/node-type';
 
 export interface GreaterThanNode {
@@ -6,7 +6,7 @@ export interface GreaterThanNode {
   input: {
     num0: number;
     num1: number;
-  }
+  };
 }
 
 export class GreaterThanNodeExecutor implements BranchExecutor<NodeType> {
@@ -23,5 +23,5 @@ export class GreaterThanNodeExecutor implements BranchExecutor<NodeType> {
 
   async executeBranch(input: GreaterThanNode['input']): Promise<boolean> {
     return input.num0 > input.num1;
-  }  
+  }
 }

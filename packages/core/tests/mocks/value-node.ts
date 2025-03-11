@@ -5,10 +5,10 @@ export interface ValueNode {
   type: NodeType.SUM;
   data: {
     value: any;
-  },
+  };
   output: {
     value: any;
-  }
+  };
 }
 
 export class ValueExecutor implements NodeExecutor<NodeType> {

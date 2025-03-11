@@ -12,18 +12,40 @@ let flowHandler: ReturnType<typeof getFlowHandler>;
 beforeAll(() => {
   outputServiceMock = new OutputServiceMock();
 
-  flowHandler = getFlowHandler<NodeType>({ 
-    executors: [new ValueExecutor(), new SumExecutor(), new SaveOutputExecutor(outputServiceMock), new NumberArrayLoopExecutor()]
-   }) as ReturnType<typeof getFlowHandler>;
-})
+  flowHandler = getFlowHandler<NodeType>({
+    executors: [
+      new ValueExecutor(),
+      new SumExecutor(),
+      new SaveOutputExecutor(outputServiceMock),
+      new NumberArrayLoopExecutor(),
+    ],
+  }) as ReturnType<typeof getFlowHandler>;
+});
 
 describe('loop-executor-workflow', () => {
   it('should sum multiple number pairs', async () => {
     await flowHandler.execute({
       nodes: [
-        { id: 'number_list', type: NodeType.NUMBER_ARRAY_LOOP, input: {}, output: {}, data: { array: [[1, 1], [2, 2]] } },
+        {
+          id: 'number_list',
+          type: NodeType.NUMBER_ARRAY_LOOP,
+          input: {},
+          output: {},
+          data: {
+            array: [
+              [1, 1],
+              [2, 2],
+            ],
+          },
+        },
         { id: 'sum', type: NodeType.SUM, input: {}, output: {} },
-        { id: 'save-output', type: NodeType.SAVE_OUTPUT, input: {}, output: {}, data: { key: 'sumResult' } },
+        {
+          id: 'save-output',
+          type: NodeType.SAVE_OUTPUT,
+          input: {},
+          output: {},
+          data: { key: 'sumResult' },
+        },
       ],
       edges: [
         { source: 'number_list', target: 'sum', sourceValue: 'num0', targetValue: 'num0' },

@@ -1,22 +1,20 @@
 import { isBranchEdge } from './edge';
 import { getSubFlow } from './flow';
+
 import getLogger from './logger';
+import { Edge } from './types/edge';
+import { Node } from './types/node';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-import { BranchEdge, Edge } from './types/edge';
 import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
 import { BranchExecutor, Executor, NodeExecutor } from './types/executor';
-import { Node } from './types/node';
+
 import { isObjectEmpty } from './utils/object';
+import { isLoopNode } from './utils/node';
 
 const log = getLogger('Node');
 
 function createNodeMap(nodes: Node[]): Map<string, Node> {
   return new Map(nodes.map((n) => [n.id, n]));
-}
-
-export function isLoopNode(node: Node, executors: Executor<UnknowEnum>[]) {
-  const foundExecutor = executors.find((e) => e.type === node.type);
-  return foundExecutor?.behavior === ExecutorBehavior.LOOP;
 }
 
 function topologicalSort(
@@ -114,7 +112,7 @@ function mapNodeOuputsToInput(
   executedNodes: ExecutedNodeOutputs,
   iteration?: number
 ) {
-  const inputEdges = edges.filter((edge) => edge.target === node.id && !isBranchEdge(edge)); 
+  const inputEdges = edges.filter((edge) => edge.target === node.id && !isBranchEdge(edge));
   const input = {} as (typeof node)['input'];
 
   for (const edge of inputEdges) {
@@ -232,25 +230,28 @@ export async function executeNode<NodeType extends UnknowEnum>(
   const executor = executors.find((e) => e.type === node.type);
   if (!executor) throw new Error(`No executor found for ${node.type}`);
 
-  if(executor?.behavior === ExecutorBehavior.BRANCH) {
+  if (executor?.behavior === ExecutorBehavior.BRANCH) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
-    const branchDecision = await (executor as BranchExecutor<NodeType>).executeBranch(input, node.data);
-    
+    const branchDecision = await (executor as BranchExecutor<NodeType>).executeBranch(
+      input,
+      node.data
+    );
+
     const decisionKey = branchDecision ? executor.getTrueKey() : executor.getFalseKey();
-    const nextEdge = edges.find(edge => isBranchEdge(edge) && edge.branch === decisionKey);
+    const nextEdge = edges.find((edge) => isBranchEdge(edge) && edge.branch === decisionKey);
 
     if (!nextEdge) {
       throw new Error(`No outgoing edge found for branch decision: ${decisionKey}`);
     }
-    
-    const nextNode = sortedNodes.find(n => n.id === nextEdge.target);
-    
+
+    const nextNode = sortedNodes.find((n) => n.id === nextEdge.target);
+
     if (!nextNode) {
       throw new Error(`No node found for id ${nextEdge.target}`);
     }
-    
-    executedNodeOutputs.set(node.id, { result: branchDecision});
-    
+
+    executedNodeOutputs.set(node.id, { result: branchDecision });
+
     await executeNode(nextNode, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
     return branchDecision;
   } else if (executor?.behavior === ExecutorBehavior.LOOP) {
