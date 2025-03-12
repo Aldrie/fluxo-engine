@@ -38,7 +38,7 @@ export default {
     }),
     terser({
       compress: {
-        passes: 3,
+        passes: 4,
         drop_console: false,
         drop_debugger: true,
       },

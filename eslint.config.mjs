@@ -2,7 +2,6 @@ import { FlatCompat } from '@eslint/eslintrc';
 import pluginJs from '@eslint/js';
 import pluginReact from 'eslint-plugin-react';
 import tseslint from 'typescript-eslint';
-import pluginJest from 'eslint-plugin-jest';
 
 const compat = new FlatCompat();
 
@@ -17,7 +16,6 @@ export default [
   pluginReact.configs.flat.recommended,
   ...compat.extends('plugin:prettier/recommended'),
   ...compat.extends('plugin:react-hooks/recommended'),
-  // pluginJest.configs.recommended,
   {
     rules: {
       'no-debugger': 'warn',
