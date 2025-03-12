@@ -6,7 +6,6 @@
     "sourceMap": false,
     "declarationMap": false,
     "emitDeclarationOnly": true,
-    "outFile": "dist/index.d.ts",
   },
   "include": ["src/index.ts"]
 }
