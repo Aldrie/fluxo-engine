@@ -32,14 +32,14 @@ describe('branch-executor-workflow', () => {
         type: NodeType.SAVE_OUTPUT,
         input: {},
         output: {},
-        data: { key: 'canDrive', defaultValue: true },
+        data: { key: 'canDriveAllow', defaultValue: true },
       },
       {
         id: 'block',
         type: NodeType.SAVE_OUTPUT,
         input: {},
         output: {},
-        data: { key: 'canDrive', defaultValue: false },
+        data: { key: 'canDriveBlock', defaultValue: false },
       },
     ],
     edges: [
@@ -50,27 +50,31 @@ describe('branch-executor-workflow', () => {
     ],
   };
 
-  it('should block user from driving', async () => {
+  it('should block user from driving (only block branch executed)', async () => {
     await flowHandler.execute({
       ...config,
       nodes: [...config.nodes, { ...userAgeNodeBase, data: { value: 3 } }],
     });
 
-    const canDriveOutputs = outputServiceMock.getOutput('canDrive') as boolean[];
-    const [canDrive] = canDriveOutputs;
+    const blockOutputs = outputServiceMock.getOutput('canDriveBlock') as boolean[];
+    const allowOutputs = outputServiceMock.getOutput('canDriveAllow');
 
-    expect(canDrive).toBe(false);
+    expect(blockOutputs).toStrictEqual([false]);
+    expect(allowOutputs).toBeUndefined();
+
+    outputServiceMock.clear();
   });
 
-  it('should allow user to drive', async () => {
+  it('should allow user to drive (only allow branch executed)', async () => {
     await flowHandler.execute({
       ...config,
       nodes: [...config.nodes, { ...userAgeNodeBase, data: { value: 22 } }],
     });
 
-    const canDriveOutputs = outputServiceMock.getOutput('canDrive') as boolean[];
-    const [_, canDrive] = canDriveOutputs;
+    const allowOutputs = outputServiceMock.getOutput('canDriveAllow') as boolean[];
+    const blockOutputs = outputServiceMock.getOutput('canDriveBlock');
 
-    expect(canDrive).toBe(true);
+    expect(allowOutputs).toStrictEqual([true]);
+    expect(blockOutputs).toBeUndefined();
   });
 });

@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "tsc --watch",
     "bundle": "rollup -c",
-    "test": "jest --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "types": "tsc -p tsconfig-build.json",
     "build": "run-s bundle types",
     "prepublishOnly": "pnpm build"
