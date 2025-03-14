@@ -2,7 +2,7 @@ import { isBranchEdge } from './edge';
 import { getSubFlow } from './flow';
 
 import getLogger from './logger';
-import { Edge } from './types/edge';
+import { BranchEdge, Edge } from './types/edge';
 import { Node } from './types/node';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
@@ -170,7 +170,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     executedNodeOutputs.set(node.id, aggregatedOutputs as any);
 
-    const nextNode = getNextNode(node, sortedNodes);
+    const nextNode = getNextNode(node, sortedNodes, executors);
     if (nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -201,7 +201,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     log('output', output);
 
-    const nextNode = getNextNode(node, sortedNodes);
+    const nextNode = getNextNode(node, sortedNodes, executors);
     if (iteration === undefined && nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -226,18 +226,28 @@ export async function executeNode<NodeType extends UnknowEnum>(
   initialNodeIds: string[],
   iteration?: number
 ): Promise<any> {
+  const key = iteration !== undefined ? `${node.id}_${iteration}` : node.id;
+  const existing = executedNodeOutputs.get(key);
+
+  if (existing !== undefined) {
+    log(`Skipping node ${node.id} for iteration ${iteration} as it was already executed`);
+    return existing;
+  }
+
   log('executing node', node.id, 'iteration', iteration);
   const executor = executors.find((e) => e.type === node.type);
   if (!executor) throw new Error(`No executor found for ${node.type}`);
 
   if (executor?.behavior === ExecutorBehavior.BRANCH) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
+
     const branchDecision = await (executor as BranchExecutor<NodeType>).executeBranch(
       input,
       node.data
     );
 
     const decisionKey = branchDecision ? executor.getTrueKey() : executor.getFalseKey();
+
     const nextEdge = edges.find((edge) => isBranchEdge(edge) && edge.branch === decisionKey);
 
     if (!nextEdge) {
@@ -245,14 +255,35 @@ export async function executeNode<NodeType extends UnknowEnum>(
     }
 
     const nextNode = sortedNodes.find((n) => n.id === nextEdge.target);
-
     if (!nextNode) {
       throw new Error(`No node found for id ${nextEdge.target}`);
     }
 
     executedNodeOutputs.set(node.id, { result: branchDecision });
 
-    await executeNode(nextNode, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
+    const branchEdges = edges.filter(
+      (edge) => edge.source === node.id && isBranchEdge(edge)
+    ) as BranchEdge[];
+
+    for (const edge of branchEdges) {
+      if (edge.branch !== decisionKey) {
+        if (iteration !== undefined) {
+          executedNodeOutputs.set(`${edge.target}_${iteration}`, { skipped: true });
+        } else {
+          executedNodeOutputs.set(edge.target, { skipped: true });
+        }
+      }
+    }
+
+    await executeNode(
+      nextNode,
+      edges,
+      executors,
+      sortedNodes,
+      executedNodeOutputs,
+      initialNodeIds,
+      iteration
+    );
     return branchDecision;
   } else if (executor?.behavior === ExecutorBehavior.LOOP) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
@@ -313,7 +344,17 @@ export async function executeNode<NodeType extends UnknowEnum>(
   }
 }
 
-function getNextNode(currentNode: Node, sortedNodes: Node[]): Node | undefined {
+function getNextNode(
+  currentNode: Node,
+  sortedNodes: Node[],
+  executors: Executor<UnknowEnum>[]
+): Node | undefined {
+  const currentExecutor = executors.find((e) => e.type === currentNode.type);
+
+  if (currentExecutor && currentExecutor.behavior === ExecutorBehavior.BRANCH) {
+    return undefined;
+  }
+
   const currentIndex = sortedNodes.indexOf(currentNode);
   return sortedNodes[currentIndex + 1];
 }

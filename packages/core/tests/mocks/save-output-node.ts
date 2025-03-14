@@ -23,6 +23,7 @@ export class SaveOutputExecutor implements NodeExecutor<NodeType> {
   }
 
   async execute(input: SaveOutputNode['input'], data: SaveOutputNode['data']) {
+    console.log('SaveOutputExecutor executing', data.key);
     this.outputService.registerOutput(data.key, input.value || data.defaultValue);
     return {};
   }

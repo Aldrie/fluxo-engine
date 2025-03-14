@@ -8,4 +8,8 @@ export class OutputServiceMock {
   getOutput<T>(key: string): T {
     return this.outputs.get(key) as T;
   }
+
+  clear() {
+    this.outputs.clear();
+  }
 }
