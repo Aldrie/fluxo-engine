@@ -100,9 +100,10 @@ function getOutputForEdge(
   iteration?: number
 ) {
   if (Array.isArray(aggregatedOutput)) {
-    const index = iteration !== undefined ? iteration : 0;
+    const index = iteration !== undefined ? iteration : aggregatedOutput.length - 1;
     return aggregatedOutput[index]?.[sourceValue || ''];
   }
+
   return aggregatedOutput?.[sourceValue || ''];
 }
 
@@ -117,8 +118,15 @@ function mapNodeOuputsToInput(
 
   for (const edge of inputEdges) {
     const aggregatedOutput = executedNodes.get(edge.source);
-    const effectiveIteration = Array.isArray(aggregatedOutput) ? iteration : undefined;
+
+    const effectiveIteration = Array.isArray(aggregatedOutput)
+      ? iteration !== undefined
+        ? iteration
+        : aggregatedOutput.length - 1
+      : undefined;
+
     const value = getOutputForEdge(aggregatedOutput, edge.sourceValue, effectiveIteration);
+    log(`Effective iteration for edge from ${edge.source}: ${effectiveIteration}`);
 
     log(
       `Mapping for edge from ${edge.source} (key: ${edge.sourceValue}) to ${node.id} (target key: ${edge.targetValue}) with effective iteration ${effectiveIteration}:`,
@@ -170,7 +178,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     executedNodeOutputs.set(node.id, aggregatedOutputs as any);
 
-    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs, iteration);
     if (nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -201,7 +209,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     log('output', output);
 
-    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs, iteration);
     if (iteration === undefined && nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -255,11 +263,15 @@ export async function executeNode<NodeType extends UnknowEnum>(
     }
 
     const nextNode = sortedNodes.find((n) => n.id === nextEdge.target);
+
     if (!nextNode) {
       throw new Error(`No node found for id ${nextEdge.target}`);
     }
 
-    executedNodeOutputs.set(node.id, { result: branchDecision });
+    executedNodeOutputs.set(node.id, { result: branchDecision, executedBranch: true });
+    log(
+      `Branch node "${node.id}" executed in iteration ${iteration} with decision: ${branchDecision}`
+    );
 
     const branchEdges = edges.filter(
       (edge) => edge.source === node.id && isBranchEdge(edge)
@@ -267,6 +279,10 @@ export async function executeNode<NodeType extends UnknowEnum>(
 
     for (const edge of branchEdges) {
       if (edge.branch !== decisionKey) {
+        log(
+          `Marking node "${edge.target}" as skipped for branch (branch: ${edge.branch}) in iteration ${iteration}`
+        );
+
         if (iteration !== undefined) {
           executedNodeOutputs.set(`${edge.target}_${iteration}`, { skipped: true });
         } else {
@@ -274,6 +290,8 @@ export async function executeNode<NodeType extends UnknowEnum>(
         }
       }
     }
+
+    log(`Executing next node in branch: ${nextNode.id} (iteration: ${iteration})`);
 
     await executeNode(
       nextNode,
@@ -284,6 +302,19 @@ export async function executeNode<NodeType extends UnknowEnum>(
       initialNodeIds,
       iteration
     );
+
+    if (iteration !== undefined) {
+      const { subFlowNodes } = getSubFlow(node, sortedNodes, edges);
+
+      for (const subNode of subFlowNodes) {
+        executedNodeOutputs.set(`${subNode.id}_${iteration}`, { branchHandled: true });
+        log(`Marking subflow node "${subNode.id}" as branchHandled for iteration ${iteration}`);
+      }
+
+      executedNodeOutputs.set(`branchCompleted_${node.id}_${iteration}`, { completed: true });
+      log(`Marked branch "${node.id}" as completed for iteration ${iteration}`);
+    }
+
     return branchDecision;
   } else if (executor?.behavior === ExecutorBehavior.LOOP) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
@@ -348,26 +379,68 @@ function getNextNode(
   currentNode: Node,
   sortedNodes: Node[],
   executors: Executor<UnknowEnum>[],
-  executedNodeOutputs: ExecutedNodeOutputs
+  executedNodeOutputs: ExecutedNodeOutputs,
+  iteration?: number
 ): Node | undefined {
-  const currentExecutor = executors.find((e) => e.type === currentNode.type);
+  if (
+    iteration !== undefined &&
+    executedNodeOutputs.get(`branchCompleted_${currentNode.id}_${iteration}`)?.completed
+  ) {
+    log(
+      `getNextNode: branch already completed for node "${currentNode.id}" in iteration ${iteration}`
+    );
 
-  if (currentExecutor && currentExecutor.behavior === ExecutorBehavior.BRANCH) {
+    return undefined;
+  }
+
+  if (
+    iteration !== undefined &&
+    executedNodeOutputs.get(`${currentNode.id}_${iteration}`)?.branchHandled
+  ) {
+    log(
+      `getNextNode: node "${currentNode.id}" already handled (branchHandled) in iteration ${iteration}`
+    );
+
+    return undefined;
+  }
+
+  const currentExecutor = executors.find((e) => e.type === currentNode.type);
+  const currentOutput = executedNodeOutputs.get(currentNode.id);
+
+  if (
+    (currentExecutor &&
+      (currentExecutor.behavior === ExecutorBehavior.BRANCH ||
+        currentExecutor.behavior === ExecutorBehavior.LOOP)) ||
+    (currentOutput && (currentOutput as any)?.executedBranch === true)
+  ) {
+    log(`getNextNode: current node "${currentNode.id}" is branch/loop or marked executedBranch`);
     return undefined;
   }
 
   const currentIndex = sortedNodes.indexOf(currentNode);
-
   for (let i = currentIndex + 1; i < sortedNodes.length; i++) {
     const next = sortedNodes[i];
     const output = executedNodeOutputs.get(next.id);
-    if (output !== undefined && output.skipped === true) {
+
+    if (output !== undefined && (output as any).skipped === true) {
+      log(`getNextNode: node "${next.id}" is marked as skipped, ignoring.`);
+      continue;
+    }
+
+    if (
+      iteration !== undefined &&
+      executedNodeOutputs.get(`${next.id}_${iteration}`)?.branchHandled
+    ) {
+      log(`getNextNode: node "${next.id}" is branchHandled for iteration ${iteration}, ignoring.`);
       continue;
     }
 
     if (output === undefined) {
+      log(`getNextNode: next candidate node found: "${next.id}"`);
       return next;
     }
   }
+
+  log(`getNextNode: no next candidate found after "${currentNode.id}"`);
   return undefined;
 }
