@@ -34,11 +34,7 @@ describe('complete workflow: loop + aggregation + branch', () => {
         input: {},
         output: {},
         data: {
-          array: [
-            [3, 2],
-            [7, 3],
-            [11, 22],
-          ],
+          array: [[3], [7], [11]],
         },
       },
       {
@@ -46,6 +42,13 @@ describe('complete workflow: loop + aggregation + branch', () => {
         type: NodeType.SUM,
         input: {},
         output: {},
+      },
+      {
+        id: 'addition',
+        type: NodeType.VALUE,
+        input: {},
+        output: {},
+        data: { value: 10 },
       },
       {
         id: 'limit',
@@ -78,7 +81,7 @@ describe('complete workflow: loop + aggregation + branch', () => {
 
     const edges: Edge[] = [
       { source: 'dataList', target: 'sum', sourceValue: 'num0', targetValue: 'num0' },
-      { source: 'dataList', target: 'sum', sourceValue: 'num1', targetValue: 'num1' },
+      { source: 'addition', target: 'sum', sourceValue: 'value', targetValue: 'num1' },
       { source: 'sum', target: 'finalDecision', sourceValue: 'result', targetValue: 'num0' },
       { source: 'limit', target: 'finalDecision', sourceValue: 'value', targetValue: 'num1' },
       { source: 'finalDecision', target: 'sumOutput', branch: 'isNotGreater' },

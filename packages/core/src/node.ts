@@ -170,7 +170,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     executedNodeOutputs.set(node.id, aggregatedOutputs as any);
 
-    const nextNode = getNextNode(node, sortedNodes, executors);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs);
     if (nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -201,7 +201,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     log('output', output);
 
-    const nextNode = getNextNode(node, sortedNodes, executors);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs);
     if (iteration === undefined && nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -347,7 +347,8 @@ export async function executeNode<NodeType extends UnknowEnum>(
 function getNextNode(
   currentNode: Node,
   sortedNodes: Node[],
-  executors: Executor<UnknowEnum>[]
+  executors: Executor<UnknowEnum>[],
+  executedNodeOutputs: ExecutedNodeOutputs
 ): Node | undefined {
   const currentExecutor = executors.find((e) => e.type === currentNode.type);
 
@@ -356,5 +357,17 @@ function getNextNode(
   }
 
   const currentIndex = sortedNodes.indexOf(currentNode);
-  return sortedNodes[currentIndex + 1];
+
+  for (let i = currentIndex + 1; i < sortedNodes.length; i++) {
+    const next = sortedNodes[i];
+    const output = executedNodeOutputs.get(next.id);
+    if (output !== undefined && output.skipped === true) {
+      continue;
+    }
+
+    if (output === undefined) {
+      return next;
+    }
+  }
+  return undefined;
 }
