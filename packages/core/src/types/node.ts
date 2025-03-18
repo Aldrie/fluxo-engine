@@ -8,7 +8,6 @@ export type Node<
   Output extends Value<string, ValueTypes> = Value<string, ValueTypes>,
 > = {
   id: string;
-  isLoop?: boolean;
   type: Type;
 
   input: ConvertValuesToObject<Input>;

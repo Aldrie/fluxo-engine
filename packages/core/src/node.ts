@@ -1,10 +1,15 @@
+import { isBranchEdge } from './edge';
 import { getSubFlow } from './flow';
+
 import getLogger from './logger';
-import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-import { Edge } from './types/edge';
-import { Executor, NodeExecutor } from './types/executor';
+import { BranchEdge, Edge } from './types/edge';
 import { Node } from './types/node';
+import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
+import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
+import { BranchExecutor, Executor, NodeExecutor } from './types/executor';
+
 import { isObjectEmpty } from './utils/object';
+import { isLoopNode } from './utils/node';
 
 const log = getLogger('Node');
 
@@ -12,7 +17,11 @@ function createNodeMap(nodes: Node[]): Map<string, Node> {
   return new Map(nodes.map((n) => [n.id, n]));
 }
 
-function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
+function topologicalSort(
+  nodes: Node[],
+  edges: Edge[],
+  executors: Executor<UnknowEnum>[] = []
+): string[] {
   const nodeMap = createNodeMap(nodes);
   const adjacencyList: Record<string, string[]> = {};
   const inDegree: Record<string, number> = {};
@@ -33,7 +42,10 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
     .sort((a, b) => {
       const nodeA = nodeMap.get(a)!;
       const nodeB = nodeMap.get(b)!;
-      return nodeA.isLoop === nodeB.isLoop ? 0 : nodeA.isLoop ? 1 : -1;
+      const nodeAIsLoop = isLoopNode(nodeA, executors);
+      const nodeBIsLoop = isLoopNode(nodeB, executors);
+
+      return nodeAIsLoop === nodeBIsLoop ? 0 : nodeAIsLoop ? 1 : -1;
     });
 
   const sortedOrder: string[] = [];
@@ -52,7 +64,10 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
     queue.sort((a, b) => {
       const nodeA = nodeMap.get(a)!;
       const nodeB = nodeMap.get(b)!;
-      return nodeA.isLoop === nodeB.isLoop ? 0 : nodeA.isLoop ? 1 : -1;
+      const nodeAIsLoop = isLoopNode(nodeA, executors);
+      const nodeBIsLoop = isLoopNode(nodeB, executors);
+
+      return nodeAIsLoop === nodeBIsLoop ? 0 : nodeAIsLoop ? 1 : -1;
     });
   }
 
@@ -63,8 +78,12 @@ function topologicalSort(nodes: Node[], edges: Edge[]): string[] {
   return sortedOrder;
 }
 
-export function getSortedNodes(nodes: Node[], edges: Edge[]): Node[] {
-  const sortedOrder = topologicalSort(nodes, edges);
+export function getSortedNodes(
+  nodes: Node[],
+  edges: Edge[],
+  executors: Executor<UnknowEnum>[]
+): Node[] {
+  const sortedOrder = topologicalSort(nodes, edges, executors);
   const nodeMap = createNodeMap(nodes);
   return sortedOrder.map((id) => nodeMap.get(id)!).filter(Boolean);
 }
@@ -81,9 +100,10 @@ function getOutputForEdge(
   iteration?: number
 ) {
   if (Array.isArray(aggregatedOutput)) {
-    const index = iteration !== undefined ? iteration : 0;
+    const index = iteration !== undefined ? iteration : aggregatedOutput.length - 1;
     return aggregatedOutput[index]?.[sourceValue || ''];
   }
+
   return aggregatedOutput?.[sourceValue || ''];
 }
 
@@ -93,13 +113,20 @@ function mapNodeOuputsToInput(
   executedNodes: ExecutedNodeOutputs,
   iteration?: number
 ) {
-  const inputEdges = edges.filter((edge) => edge.target === node.id);
+  const inputEdges = edges.filter((edge) => edge.target === node.id && !isBranchEdge(edge));
   const input = {} as (typeof node)['input'];
 
   for (const edge of inputEdges) {
     const aggregatedOutput = executedNodes.get(edge.source);
-    const effectiveIteration = Array.isArray(aggregatedOutput) ? iteration : undefined;
+
+    const effectiveIteration = Array.isArray(aggregatedOutput)
+      ? iteration !== undefined
+        ? iteration
+        : aggregatedOutput.length - 1
+      : undefined;
+
     const value = getOutputForEdge(aggregatedOutput, edge.sourceValue, effectiveIteration);
+    log(`Effective iteration for edge from ${edge.source}: ${effectiveIteration}`);
 
     log(
       `Mapping for edge from ${edge.source} (key: ${edge.sourceValue}) to ${node.id} (target key: ${edge.targetValue}) with effective iteration ${effectiveIteration}:`,
@@ -151,7 +178,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     executedNodeOutputs.set(node.id, aggregatedOutputs as any);
 
-    const nextNode = getNextNode(node, sortedNodes);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs, iteration);
     if (nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -182,7 +209,7 @@ async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
     log('output', output);
 
-    const nextNode = getNextNode(node, sortedNodes);
+    const nextNode = getNextNode(node, sortedNodes, executors, executedNodeOutputs, iteration);
     if (iteration === undefined && nextNode && !initialNodeIds.includes(nextNode.id)) {
       await executeNode(
         nextNode,
@@ -207,11 +234,89 @@ export async function executeNode<NodeType extends UnknowEnum>(
   initialNodeIds: string[],
   iteration?: number
 ): Promise<any> {
+  const key = iteration !== undefined ? `${node.id}_${iteration}` : node.id;
+  const existing = executedNodeOutputs.get(key);
+
+  if (existing !== undefined) {
+    log(`Skipping node ${node.id} for iteration ${iteration} as it was already executed`);
+    return existing;
+  }
+
   log('executing node', node.id, 'iteration', iteration);
   const executor = executors.find((e) => e.type === node.type);
   if (!executor) throw new Error(`No executor found for ${node.type}`);
 
-  if (executor.isLoopExecutor) {
+  if (executor?.behavior === ExecutorBehavior.BRANCH) {
+    const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
+
+    const branchDecision = await (executor as BranchExecutor<NodeType>).executeBranch(
+      input,
+      node.data
+    );
+
+    const decisionKey = branchDecision ? executor.getTrueKey() : executor.getFalseKey();
+
+    const nextEdge = edges.find((edge) => isBranchEdge(edge) && edge.branch === decisionKey);
+
+    if (!nextEdge) {
+      throw new Error(`No outgoing edge found for branch decision: ${decisionKey}`);
+    }
+
+    const nextNode = sortedNodes.find((n) => n.id === nextEdge.target);
+
+    if (!nextNode) {
+      throw new Error(`No node found for id ${nextEdge.target}`);
+    }
+
+    executedNodeOutputs.set(node.id, { result: branchDecision, executedBranch: true });
+    log(
+      `Branch node "${node.id}" executed in iteration ${iteration} with decision: ${branchDecision}`
+    );
+
+    const branchEdges = edges.filter(
+      (edge) => edge.source === node.id && isBranchEdge(edge)
+    ) as BranchEdge[];
+
+    for (const edge of branchEdges) {
+      if (edge.branch !== decisionKey) {
+        log(
+          `Marking node "${edge.target}" as skipped for branch (branch: ${edge.branch}) in iteration ${iteration}`
+        );
+
+        if (iteration !== undefined) {
+          executedNodeOutputs.set(`${edge.target}_${iteration}`, { skipped: true });
+        } else {
+          executedNodeOutputs.set(edge.target, { skipped: true });
+        }
+      }
+    }
+
+    log(`Executing next node in branch: ${nextNode.id} (iteration: ${iteration})`);
+
+    await executeNode(
+      nextNode,
+      edges,
+      executors,
+      sortedNodes,
+      executedNodeOutputs,
+      initialNodeIds,
+      iteration
+    );
+
+    if (iteration !== undefined) {
+      const { subFlowNodes } = getSubFlow(node, sortedNodes, edges);
+
+      for (const subNode of subFlowNodes) {
+        executedNodeOutputs.set(`${subNode.id}_${iteration}`, { branchHandled: true });
+        log(`Marking subflow node "${subNode.id}" as branchHandled for iteration ${iteration}`);
+      }
+
+      executedNodeOutputs.set(`branchCompleted_${node.id}_${iteration}`, { completed: true });
+      log(`Marked branch "${node.id}" as completed for iteration ${iteration}`);
+    }
+
+    return branchDecision;
+  } else if (executor?.behavior === ExecutorBehavior.LOOP) {
     const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iteration);
     const loopResult = await executor.getArray(input, node.data, iteration);
     log('loopResult:', loopResult);
@@ -270,7 +375,72 @@ export async function executeNode<NodeType extends UnknowEnum>(
   }
 }
 
-function getNextNode(currentNode: Node, sortedNodes: Node[]): Node | undefined {
+function getNextNode(
+  currentNode: Node,
+  sortedNodes: Node[],
+  executors: Executor<UnknowEnum>[],
+  executedNodeOutputs: ExecutedNodeOutputs,
+  iteration?: number
+): Node | undefined {
+  if (
+    iteration !== undefined &&
+    executedNodeOutputs.get(`branchCompleted_${currentNode.id}_${iteration}`)?.completed
+  ) {
+    log(
+      `getNextNode: branch already completed for node "${currentNode.id}" in iteration ${iteration}`
+    );
+
+    return undefined;
+  }
+
+  if (
+    iteration !== undefined &&
+    executedNodeOutputs.get(`${currentNode.id}_${iteration}`)?.branchHandled
+  ) {
+    log(
+      `getNextNode: node "${currentNode.id}" already handled (branchHandled) in iteration ${iteration}`
+    );
+
+    return undefined;
+  }
+
+  const currentExecutor = executors.find((e) => e.type === currentNode.type);
+  const currentOutput = executedNodeOutputs.get(currentNode.id);
+
+  if (
+    (currentExecutor &&
+      (currentExecutor.behavior === ExecutorBehavior.BRANCH ||
+        currentExecutor.behavior === ExecutorBehavior.LOOP)) ||
+    (currentOutput && (currentOutput as any)?.executedBranch === true)
+  ) {
+    log(`getNextNode: current node "${currentNode.id}" is branch/loop or marked executedBranch`);
+    return undefined;
+  }
+
   const currentIndex = sortedNodes.indexOf(currentNode);
-  return sortedNodes[currentIndex + 1];
+  for (let i = currentIndex + 1; i < sortedNodes.length; i++) {
+    const next = sortedNodes[i];
+    const output = executedNodeOutputs.get(next.id);
+
+    if (output !== undefined && (output as any).skipped === true) {
+      log(`getNextNode: node "${next.id}" is marked as skipped, ignoring.`);
+      continue;
+    }
+
+    if (
+      iteration !== undefined &&
+      executedNodeOutputs.get(`${next.id}_${iteration}`)?.branchHandled
+    ) {
+      log(`getNextNode: node "${next.id}" is branchHandled for iteration ${iteration}, ignoring.`);
+      continue;
+    }
+
+    if (output === undefined) {
+      log(`getNextNode: next candidate node found: "${next.id}"`);
+      return next;
+    }
+  }
+
+  log(`getNextNode: no next candidate found after "${currentNode.id}"`);
+  return undefined;
 }

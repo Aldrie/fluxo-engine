@@ -1,6 +1,6 @@
 {
   "name": "@fluxo-engine/core",
-  "version": "1.0.7",
+  "version": "1.1.5",
   "description": "fluxo workflow engine core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "tsc --watch",
     "bundle": "rollup -c",
-    "types": "tsc --emitDeclarationOnly",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "types": "tsc -p tsconfig-build.json",
     "build": "run-s bundle types",
     "prepublishOnly": "pnpm build"
   },
@@ -31,5 +33,13 @@
     "typescript"
   ],
   "author": "Aldriê <aldriemizobuti@outlook.com>",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@faker-js/faker": "^9.6.0",
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "eslint-plugin-jest": "^28.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6"
+  }
 }

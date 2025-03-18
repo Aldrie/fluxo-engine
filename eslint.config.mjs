@@ -10,7 +10,7 @@ export default [
   {
     files: ['packages/**/*.{js,mjs,cjs,ts,jsx,tsx}'],
   },
-  { ignores: ['packages/**/dist/**/*'] },
+  { ignores: ['packages/**/dist/**/*', 'packages/**/jest.config.js'] },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
