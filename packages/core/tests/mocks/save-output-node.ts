@@ -10,6 +10,7 @@ export interface SaveOutputNode {
   data: {
     key: any;
     defaultValue?: any;
+    allowEmptyValue?: boolean;
   };
 }
 
@@ -23,8 +24,11 @@ export class SaveOutputExecutor implements NodeExecutor<NodeType> {
   }
 
   async execute(input: SaveOutputNode['input'], data: SaveOutputNode['data']) {
-    console.log('SaveOutputExecutor executing', data.key);
-    this.outputService.registerOutput(data.key, input.value || data.defaultValue);
+    const value = input.value || data.defaultValue;
+
+    if (value === undefined || (value === null && !data?.allowEmptyValue)) return {};
+
+    this.outputService.registerOutput(data.key, value);
     return {};
   }
 }

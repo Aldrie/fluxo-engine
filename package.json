@@ -1,6 +1,6 @@
 {
   "name": "fluxo-engine",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A flexible, modular, fast, and lightweight workflow engine",
   "private": true,
   "workspaces": [
@@ -9,7 +9,9 @@
   "scripts": {
     "lint": "eslint --fix",
     "dev": "pnpm --filter @fluxo-engine/* run dev",
-    "build": "pnpm --filter @fluxo-engine/* run build"
+    "build": "pnpm --filter @fluxo-engine/* run build",
+    "test": "pnpm --filter @fluxo-engine/* run test",
+    "test:watch": "pnpm --filter @fluxo-engine/* run test:watch"
   },
   "keywords": [
     "fluxo",
