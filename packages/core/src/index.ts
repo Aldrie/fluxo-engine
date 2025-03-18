@@ -6,6 +6,7 @@ export * from './types/executor';
 export * from './types/flow';
 export * from './types/node';
 export * from './types/value';
+export * from './types/context';
 
 import getLogger, { setIsLoggerEnabled } from './logger';
 import { executeNode, getInitialNodeIds, getSortedNodes } from './node';
