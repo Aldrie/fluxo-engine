@@ -22,7 +22,6 @@ export class GreaterThanNodeExecutor implements BranchExecutor<NodeType> {
   }
 
   async executeBranch(input: GreaterThanNode['input']): Promise<boolean> {
-    console.log('executing branch', input);
     return input.num0 > input.num1;
   }
 }

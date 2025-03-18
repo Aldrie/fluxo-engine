@@ -49,7 +49,6 @@ describe('loop-branch-executor-workflow', () => {
         type: NodeType.GREATER_THAN,
         input: {},
         output: {},
-        data: { operator: '>' },
       },
       {
         id: 'pass',

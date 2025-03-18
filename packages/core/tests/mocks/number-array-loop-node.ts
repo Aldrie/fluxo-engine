@@ -29,7 +29,6 @@ export class NumberArrayLoopExecutor implements LoopNodeExecutor<NodeType> {
       )
     );
 
-    console.log('result', result);
     return result;
   }
 }
