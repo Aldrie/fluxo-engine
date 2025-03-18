@@ -220,5 +220,4 @@ await flowHandler.execute({ nodes, edges });
 - [x] **🔀 Branch Executors**
   Implement branch executors to handle conditional execution paths.
 
-
 <img src="https://media.tenor.com/sbfBfp3FeY8AAAAj/oia-uia.gif" width="100" alt="Fluxo Animation" />
