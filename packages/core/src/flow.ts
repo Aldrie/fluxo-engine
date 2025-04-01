@@ -6,7 +6,7 @@ import { isLoopNode } from './utils/node';
 
 export function getSubFlow(
   loopNode: Node,
-  allNodes: Node[],
+  sortedNodes: Node[],
   edges: Edge[],
   executors: Executor<UnknowEnum>[] = []
 ): {
@@ -23,7 +23,7 @@ export function getSubFlow(
     const childEdges = edges.filter((e) => e.source === current.id);
 
     for (const edge of childEdges) {
-      const child = allNodes.find((n) => n.id === edge.target);
+      const child = sortedNodes.find((n) => n.id === edge.target);
       if (!child || visited.has(child.id)) continue;
 
       subFlowNodes.push(child);
@@ -36,5 +36,13 @@ export function getSubFlow(
   }
 
   dfs(loopNode);
-  return { subFlowNodes, resumeNodes };
+
+  const sortedOrderMap = new Map(sortedNodes.map((node, index) => [node.id, index]));
+
+  return {
+    subFlowNodes: subFlowNodes.sort((a, b) => {
+      return (sortedOrderMap.get(a.id) || 0) - (sortedOrderMap.get(b.id) || 0);
+    }),
+    resumeNodes,
+  };
 }
