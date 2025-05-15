@@ -101,10 +101,14 @@ function getOutputForEdge(
   iteration?: number
 ) {
   if (Array.isArray(aggregatedOutput)) {
-    const index = iteration !== undefined ? iteration : aggregatedOutput.length - 1;
+    let index: number;
+    if (iteration !== undefined && iteration < aggregatedOutput.length) {
+      index = iteration;
+    } else {
+      index = aggregatedOutput.length - 1;
+    }
     return aggregatedOutput[index]?.[sourceValue || ''] ?? null;
   }
-
   return aggregatedOutput?.[sourceValue || ''];
 }
 
