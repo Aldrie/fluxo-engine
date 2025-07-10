@@ -1,16 +1,26 @@
 import { isBranchEdge } from './edge';
 import { getSubFlow } from './flow';
-
 import getLogger from './logger';
+import { FluxoWaitSignal } from './wait-signal';
+
 import { IterationContext } from './types/context';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { BranchEdge, Edge } from './types/edge';
 import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
-import { BranchExecutor, Executor, LoopNodeExecutor, NodeExecutor } from './types/executor';
 import { Node } from './types/node';
+
+import {
+  BranchExecutor,
+  Executor,
+  LoopNodeExecutor,
+  NodeExecutor,
+  WaitExecutor,
+} from './types/executor';
 
 import { getOutputKey, isLoopNode } from './utils/node';
 import { isObjectEmpty } from './utils/object';
+import { mapToObject } from './utils/map';
+import { ExecutionSnapshot } from './types/snapshot';
 
 const log = getLogger('Node');
 
@@ -378,6 +388,57 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
   return branchDecision;
 }
 
+async function executeWaitNode<NodeType extends UnknowEnum>(
+  node: Node<NodeType>,
+  edges: Edge[],
+  executor: WaitExecutor<NodeType>,
+  executedNodeOutputs: ExecutedNodeOutputs,
+  executors: Executor<NodeType>[],
+  sortedNodes: Node[],
+  initialNodeIds: string[],
+  iterationContext: IterationContext = [],
+  key: string
+): Promise<any> {
+  try {
+    const input = mapNodeOuputsToInput(edges, node, executedNodeOutputs, iterationContext.at(-1));
+
+    const output = await executor.execute(input, node.data);
+
+    executedNodeOutputs.set(key, output);
+
+    const next = getNextNode(
+      node,
+      sortedNodes,
+      executors,
+      executedNodeOutputs,
+      iterationContext.at(-1)
+    );
+    if (next && !initialNodeIds.includes(next.id)) {
+      await executeNode(
+        next,
+        edges,
+        executors,
+        sortedNodes,
+        executedNodeOutputs,
+        initialNodeIds,
+        iterationContext
+      );
+    }
+
+    return output;
+  } catch (e) {
+    if (e instanceof FluxoWaitSignal) {
+      const snapshot: ExecutionSnapshot = {
+        executedNodeOutputs: mapToObject(executedNodeOutputs),
+        pending: [{ nodeId: node.id, iteration: [...iterationContext] }],
+      };
+      throw new FluxoWaitSignal(snapshot);
+    }
+
+    throw e;
+  }
+}
+
 export async function executeNode<NodeType extends UnknowEnum>(
   node: Node<NodeType>,
   edges: Edge[],
@@ -399,6 +460,20 @@ export async function executeNode<NodeType extends UnknowEnum>(
   const executor = executors.find((e) => e.type === node.type);
 
   if (!executor) throw new Error(`No executor found for ${node.type}`);
+
+  if (executor.behavior === ExecutorBehavior.WAIT) {
+    return executeWaitNode(
+      node,
+      edges,
+      executor as WaitExecutor<NodeType>,
+      executedNodeOutputs,
+      executors,
+      sortedNodes,
+      initialNodeIds,
+      iterationContext,
+      key
+    );
+  }
 
   if (executor?.behavior === ExecutorBehavior.BRANCH) {
     return executeBranchNode(
@@ -438,7 +513,7 @@ export async function executeNode<NodeType extends UnknowEnum>(
   );
 }
 
-function getNextNode(
+export function getNextNode(
   currentNode: Node,
   sortedNodes: Node[],
   executors: Executor<UnknowEnum>[],
