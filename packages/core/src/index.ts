@@ -11,7 +11,7 @@ export * from './types/snapshot';
 export * from './types/value';
 
 import { buildExecutionContextCache } from './execution/execution-context';
-import { executeNode, getNextNode } from './execution/node';
+import { executeNode } from './execution/node';
 import { runFlow } from './execution/flow';
 
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
@@ -20,6 +20,7 @@ import { ConvertValuesToObject, Value } from './types/value';
 import { Flow, FlowExecutionResult, FlowHandlerOptions, ResumeFlowOptions } from './types/flow';
 
 import { objectToMap } from './utils/map';
+import { getNextNode } from './utils/node';
 
 import { setIsLoggerEnabled } from './logger';
 

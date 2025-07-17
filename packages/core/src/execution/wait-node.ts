@@ -1,12 +1,12 @@
 import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import getLogger from '../logger';
-import { executeNode, getNextNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { WaitExecutor } from '../types/executor';
 import { ExecutionSnapshot, PendingWait } from '../types/snapshot';
 import { mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { mapToObject } from '../utils/map';
+import { getNextNode } from '../utils/node';
 
 interface WaitOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   executor: WaitExecutor<NodeType>;
@@ -16,7 +16,8 @@ interface WaitOptions<NodeType extends UnknowEnum> extends ExecutionContext<Node
 const log = getLogger('WaitNode');
 
 export async function executeWaitNode<NodeType extends UnknowEnum>(
-  opts: WaitOptions<NodeType>
+  opts: WaitOptions<NodeType>,
+  resumeExecution: (ctx: ExecutionContext<NodeType>) => Promise<any>
 ): Promise<any> {
   const {
     node,
@@ -42,7 +43,7 @@ export async function executeWaitNode<NodeType extends UnknowEnum>(
     const next = getNextNode(opts);
 
     if (next && !initialNodeIds.includes(next.id)) {
-      await executeNode({ ...opts, node: next });
+      await resumeExecution({ ...opts, node: next });
     }
 
     return output;

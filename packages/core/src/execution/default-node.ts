@@ -1,16 +1,16 @@
-import { executeNode, getNextNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { NodeExecutor } from '../types/executor';
 import { mapNodeOutputsToInput } from '../utils/edge-mapping';
-import { getOutputKey } from '../utils/node';
+import { getNextNode, getOutputKey } from '../utils/node';
 
 interface DefaultNodeOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   currentExecutor: NodeExecutor<NodeType>;
 }
 
 export async function executeDefaultNode<NodeType extends UnknowEnum>(
-  opts: DefaultNodeOptions<NodeType>
+  opts: DefaultNodeOptions<NodeType>,
+  resumeExecution: (ctx: ExecutionContext<NodeType>) => Promise<any>
 ): Promise<any> {
   const {
     node,
@@ -57,7 +57,7 @@ export async function executeDefaultNode<NodeType extends UnknowEnum>(
     const next = getNextNode({ ...opts, node, iterationContext });
 
     if (next && !initialNodeIds.includes(next.id)) {
-      await executeNode({ ...opts, node: next });
+      await resumeExecution({ ...opts, node: next });
     }
 
     return agg;
@@ -87,7 +87,7 @@ export async function executeDefaultNode<NodeType extends UnknowEnum>(
   const next = getNextNode({ ...opts, node, iterationContext });
 
   if (iter === undefined && next && !initialNodeIds.includes(next.id)) {
-    await executeNode({ ...opts, node: next });
+    await resumeExecution({ ...opts, node: next });
   }
 
   return output;

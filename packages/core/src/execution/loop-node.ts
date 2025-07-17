@@ -1,12 +1,11 @@
 import getLogger from '../logger';
-import { executeNode, getNextNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { LoopNodeExecutor } from '../types/executor';
 import { FlowExecutionStatus } from '../types/flow';
 import { mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { getSubFlow } from '../utils/flow';
-import { getOutputKey } from '../utils/node';
+import { getNextNode, getOutputKey } from '../utils/node';
 
 interface LoopOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   currentExecutor: LoopNodeExecutor<NodeType>;
@@ -15,7 +14,8 @@ interface LoopOptions<NodeType extends UnknowEnum> extends ExecutionContext<Node
 const log = getLogger('LoopNode');
 
 export async function executeLoopNode<NodeType extends UnknowEnum>(
-  opts: LoopOptions<NodeType>
+  opts: LoopOptions<NodeType>,
+  resumeExecution: (ctx: ExecutionContext<NodeType>) => Promise<any>
 ): Promise<any> {
   const {
     node,
@@ -43,7 +43,7 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
 
     const next = getNextNode({ ...opts, node, iterationContext });
 
-    if (next) await executeNode({ ...opts, node: next, iterationContext });
+    if (next) await resumeExecution({ ...opts, node: next, iterationContext });
 
     return executedNodeOutputs.get(node.id);
   }
@@ -91,7 +91,7 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
     log(`${prefix} iter ${i} start`);
 
     for (const child of childExecNodes) {
-      const res = await executeNode({
+      const res = await resumeExecution({
         ...opts,
         node: child,
         iterationContext: newIterationContext,

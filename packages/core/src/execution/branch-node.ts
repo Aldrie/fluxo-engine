@@ -1,4 +1,3 @@
-import { executeNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { BranchExecutor } from '../types/executor';
@@ -10,7 +9,8 @@ interface BranchOptions<NodeType extends UnknowEnum> extends ExecutionContext<No
 }
 
 export async function executeBranchNode<NodeType extends UnknowEnum>(
-  opts: BranchOptions<NodeType>
+  opts: BranchOptions<NodeType>,
+  resumeExecution: (ctx: ExecutionContext<NodeType>) => Promise<any>
 ) {
   const {
     node,
@@ -86,6 +86,6 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
     }
   }
 
-  await executeNode({ ...opts, node: nextNode });
+  await resumeExecution({ ...opts, node: nextNode });
   return decision;
 }
