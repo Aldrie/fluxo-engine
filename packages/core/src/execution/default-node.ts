@@ -1,9 +1,9 @@
-import { mapNodeOutputsToInput } from '../utils/edge-mapping';
+import { executeNode, getNextNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { NodeExecutor } from '../types/executor';
+import { mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { getOutputKey } from '../utils/node';
-import { executeNode, getNextNode } from './node';
 
 interface DefaultNodeOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   currentExecutor: NodeExecutor<NodeType>;

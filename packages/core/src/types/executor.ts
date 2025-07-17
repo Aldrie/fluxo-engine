@@ -1,5 +1,5 @@
-import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import { UnknowEnum } from './core';
+import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import { ExecutorBehavior } from './enums/ExecutorBehavior';
 import { Node } from './node';
 

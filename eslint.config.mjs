@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint';
 const compat = new FlatCompat();
 
 /** @type {import('eslint').Linter.Config[]} */
-export default [
+
+export const baseConfig = [
   {
     files: ['packages/**/*.{js,mjs,cjs,ts,jsx,tsx}'],
   },
@@ -26,3 +27,5 @@ export default [
     },
   },
 ];
+
+export default baseConfig;

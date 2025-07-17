@@ -8,6 +8,7 @@
     "dist"
   ],
   "scripts": {
+    "lint": "eslint --fix",
     "dev": "tsc --watch",
     "bundle": "rollup -c",
     "test": "vitest",

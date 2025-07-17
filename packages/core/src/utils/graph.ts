@@ -1,8 +1,8 @@
-import { Node } from '../types/node';
-import { Edge } from '../types/edge';
 import { isLoopNode } from './node';
 import { UnknowEnum } from '../types/core';
+import { Edge } from '../types/edge';
 import { Executor } from '../types/executor';
+import { Node } from '../types/node';
 
 function topologicalSort(
   nodes: Node[],

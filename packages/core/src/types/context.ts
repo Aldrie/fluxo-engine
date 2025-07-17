@@ -1,7 +1,7 @@
-import { Node } from './node';
+import { ExecutedNodeOutputs, UnknowEnum } from './core';
 import { BranchEdge, Edge } from './edge';
 import { Executor } from './executor';
-import { ExecutedNodeOutputs, UnknowEnum } from './core';
+import { Node } from './node';
 
 export type IterationContext = number[];
 

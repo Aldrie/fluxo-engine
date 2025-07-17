@@ -1,9 +1,9 @@
-import { isBranchEdge } from '../utils/edge-mapping';
 import { ExecutionContextCache } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { BranchEdge, Edge } from '../types/edge';
 import { Executor } from '../types/executor';
 import { Node } from '../types/node';
+import { isBranchEdge } from '../utils/edge-mapping';
 import { getSortedNodes } from '../utils/graph';
 
 interface BuildExecutionContextCacheOptions<NodeType extends UnknowEnum> {

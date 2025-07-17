@@ -1,5 +1,6 @@
 import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import getLogger from '../logger';
+import { executeNode } from './node';
 import { ExecutionContextCache } from '../types/context';
 import { ExecutedNodeOutputs, UnknowEnum } from '../types/core';
 import { Edge } from '../types/edge';
@@ -7,7 +8,6 @@ import { ValueTypes } from '../types/enums/ValueTypes';
 import { ExecuteFlowOptions, FlowExecutionResult, FlowExecutionStatus } from '../types/flow';
 import { ConvertValuesToObject, Value } from '../types/value';
 import { getInitialNodeIds } from '../utils/graph';
-import { executeNode } from './node';
 
 const log = getLogger('FlowHandler');
 

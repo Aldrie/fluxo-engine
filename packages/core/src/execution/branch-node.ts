@@ -1,9 +1,9 @@
-import { isBranchEdge, mapNodeOutputsToInput } from '../utils/edge-mapping';
+import { executeNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { BranchExecutor } from '../types/executor';
+import { isBranchEdge, mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { getOutputKey } from '../utils/node';
-import { executeNode } from './node';
 
 interface BranchOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   currentExecutor: BranchExecutor<NodeType>;

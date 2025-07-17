@@ -1,15 +1,15 @@
 import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import getLogger from '../logger';
+import { executeBranchNode } from './branch-node';
+import { executeDefaultNode } from './default-node';
+import { executeLoopNode } from './loop-node';
+import { executeWaitNode } from './wait-node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { ExecutorBehavior } from '../types/enums/ExecutorBehavior';
 import { BranchExecutor, LoopNodeExecutor, NodeExecutor, WaitExecutor } from '../types/executor';
 import { Node } from '../types/node';
 import { getOutputKey } from '../utils/node';
-import { executeBranchNode } from './branch-node';
-import { executeDefaultNode } from './default-node';
-import { executeLoopNode } from './loop-node';
-import { executeWaitNode } from './wait-node';
 
 const log = getLogger('Node');
 

@@ -1,12 +1,12 @@
-import { mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import getLogger from '../logger';
+import { executeNode, getNextNode } from './node';
 import { ExecutionContext } from '../types/context';
 import { UnknowEnum } from '../types/core';
 import { WaitExecutor } from '../types/executor';
 import { ExecutionSnapshot, PendingWait } from '../types/snapshot';
+import { mapNodeOutputsToInput } from '../utils/edge-mapping';
 import { mapToObject } from '../utils/map';
-import { executeNode, getNextNode } from './node';
 
 interface WaitOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   executor: WaitExecutor<NodeType>;
