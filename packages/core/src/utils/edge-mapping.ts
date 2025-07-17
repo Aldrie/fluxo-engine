@@ -1,7 +1,7 @@
-import { ExecutedNodeOutputs } from './types/core';
-import { BranchEdge, Edge } from './types/edge';
-import { Node } from './types/node';
-import { isObjectEmpty } from './utils/object';
+import { ExecutedNodeOutputs } from '../types/core';
+import { BranchEdge, Edge } from '../types/edge';
+import { Node } from '../types/node';
+import { isObjectEmpty } from '../utils/object';
 
 export function isBranchEdge(edge: Edge): edge is BranchEdge {
   const branchEdge = edge as BranchEdge;

@@ -1,4 +1,4 @@
-export * from './flow';
+export * from './utils/flow';
 
 export * from './types/context';
 export * from './types/edge';
@@ -14,108 +14,13 @@ import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { ValueTypes } from './types/enums/ValueTypes';
 import { ConvertValuesToObject, Value } from './types/value';
 
-import {
-  BuildExecutionContextCacheOptions,
-  ExecuteFlowOptions,
-  Flow,
-  FlowExecutionResult,
-  FlowExecutionStatus,
-  FlowHandlerOptions,
-  ResumeFlowOptions,
-} from './types/flow';
+import { Flow, FlowExecutionResult, FlowHandlerOptions, ResumeFlowOptions } from './types/flow';
 
-import { isBranchEdge } from './edge';
-import getLogger, { setIsLoggerEnabled } from './logger';
-import { executeNode, getInitialNodeIds, getNextNode, getSortedNodes } from './node';
-import { BranchEdge, Edge } from './types/edge';
-import { Executor } from './types/executor';
+import { buildExecutionContextCache } from './execution/execution-context';
+import { runFlow } from './execution/flow';
+import { executeNode, getNextNode } from './execution/node';
+import { setIsLoggerEnabled } from './logger';
 import { objectToMap } from './utils/map';
-import { FluxoWaitSignal } from './wait-signal';
-import { ExecutionContextCache } from './types/context';
-import { Node } from './types/node';
-
-const log = getLogger('Index');
-
-export function buildExecutionContextCache<NodeType extends UnknowEnum>({
-  nodes,
-  edges,
-  executors,
-}: BuildExecutionContextCacheOptions<NodeType>): ExecutionContextCache<NodeType> {
-  const sortedNodes = getSortedNodes(nodes, edges, executors);
-  const nodeIndexMap = new Map(sortedNodes.map((n, i) => [n.id, i]));
-
-  const executorByType = new Map<NodeType, Executor<NodeType>>(
-    executors?.map((e) => [e.type, e] as const)
-  );
-
-  const inputEdgesMap = new Map<string, Edge[]>();
-
-  for (const e of edges) {
-    if (!isBranchEdge(e)) {
-      const arr = inputEdgesMap.get(e.target) ?? [];
-      arr.push(e);
-      inputEdgesMap.set(e.target, arr);
-    }
-  }
-
-  const outputEdgesMap = new Map<string, Edge[]>();
-  const branchEdgesMap = new Map<string, BranchEdge[]>();
-
-  for (const e of edges) {
-    if (isBranchEdge(e)) {
-      const arr = branchEdgesMap.get(e.source) ?? [];
-      arr.push(e as BranchEdge);
-      branchEdgesMap.set(e.source, arr);
-    } else {
-      const arr = outputEdgesMap.get(e.source) ?? [];
-      arr.push(e);
-      outputEdgesMap.set(e.source, arr);
-    }
-  }
-
-  return {
-    executorByType,
-    inputEdgesMap,
-    nodeIndexMap,
-    sortedNodes: sortedNodes as Node<NodeType>[],
-    outputEdgesMap,
-    branchEdgesMap,
-  };
-}
-
-export async function executeFlow<NodeType extends UnknowEnum>({
-  nodes,
-  edges,
-  executors,
-  executedNodeOutputs,
-  initialNodeIds: forcedInitialNodeIds,
-  executionContextCache,
-}: ExecuteFlowOptions<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>>) {
-  log('nodes', nodes);
-  log('edges', edges);
-
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-  const initialNodeIds =
-    forcedInitialNodeIds ?? getInitialNodeIds(executionContextCache?.sortedNodes, edges);
-
-  log('sortedNodes', executionContextCache?.sortedNodes);
-  log('initialNodeIds', initialNodeIds);
-
-  for (const nodeId of initialNodeIds) {
-    const node = nodeMap.get(nodeId)!;
-
-    await executeNode({
-      node,
-      edges,
-      executors,
-      executedNodeOutputs,
-      initialNodeIds,
-      iterationContext: [],
-      ...executionContextCache,
-    });
-  }
-}
 
 export function getFlowHandler<NodeType extends UnknowEnum>({
   executors,
@@ -137,25 +42,7 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
       executors,
     });
 
-    try {
-      await executeFlow({
-        executors,
-        nodes,
-        edges,
-        executedNodeOutputs,
-        executionContextCache,
-      });
-      return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
-    } catch (error) {
-      if (error instanceof FluxoWaitSignal) {
-        return {
-          status: FlowExecutionStatus.WAITING,
-          snapshot: error.snapshot ?? { executedNodeOutputs: {}, pending: [] },
-        };
-      }
-
-      throw error;
-    }
+    return runFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
   }
 
   async function resume({
@@ -217,26 +104,7 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
       });
     }
 
-    try {
-      await executeFlow({
-        executors,
-        nodes,
-        edges,
-        executedNodeOutputs,
-        executionContextCache,
-      });
-
-      return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
-    } catch (error) {
-      if (error instanceof FluxoWaitSignal) {
-        return {
-          status: FlowExecutionStatus.WAITING,
-          snapshot: error.snapshot ?? { executedNodeOutputs: {}, pending: [] },
-        };
-      }
-
-      throw error;
-    }
+    return runFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
   }
 
   return { execute, resume };

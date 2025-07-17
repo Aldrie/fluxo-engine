@@ -1,11 +1,11 @@
-import { ConvertValuesToObject, Flow, getFlowHandler, FlowExecutionStatus } from '../src';
+import { ConvertValuesToObject, Flow, getFlowHandler } from '../src';
 import { NodeType } from './mocks/enums/node-type';
 import { GreaterThanNodeExecutor } from './mocks/greater-than-node';
 import { NumberArrayLoopExecutor } from './mocks/number-array-loop-node';
 import { ObjectArrayLoopExecutor } from './mocks/object-array-loop-node';
-import { ValueIsNodeExecutor } from './mocks/value-is-node';
 import { OutputServiceMock } from './mocks/output-service';
 import { SaveOutputExecutor } from './mocks/save-output-node';
+import { ValueIsNodeExecutor } from './mocks/value-is-node';
 import { ValueExecutor } from './mocks/value-node';
 
 let out: OutputServiceMock;

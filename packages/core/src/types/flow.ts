@@ -5,12 +5,6 @@ import { Executor } from './executor';
 import { Node } from './node';
 import { ExecutionSnapshot } from './snapshot';
 
-export interface BuildExecutionContextCacheOptions<NodeType extends UnknowEnum> {
-  nodes: Node<NodeType>[];
-  edges: Edge[];
-  executors: Executor<NodeType>[];
-}
-
 export interface Flow<NodeType extends UnknowEnum, InitalData = unknown> {
   nodes: Node<NodeType>[];
   edges: Edge[];

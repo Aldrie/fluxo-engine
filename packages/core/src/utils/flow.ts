@@ -1,8 +1,8 @@
-import { ExecutionContextCache } from './types/context';
-import { UnknowEnum } from './types/core';
-import { Executor } from './types/executor';
-import { Node } from './types/node';
-import { isLoopNode } from './utils/node';
+import { ExecutionContextCache } from '../types/context';
+import { UnknowEnum } from '../types/core';
+import { Executor } from '../types/executor';
+import { Node } from '../types/node';
+import { isLoopNode } from './node';
 
 export interface GetSubFlowOptions<NodeType extends UnknowEnum>
   extends Pick<ExecutionContextCache<NodeType>, 'outputEdgesMap' | 'nodeIndexMap'> {
