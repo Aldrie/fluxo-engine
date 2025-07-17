@@ -9,6 +9,6 @@ export function isLoopNode(node: Node, executors: Executor<UnknowEnum>[]) {
   return foundExecutor?.behavior === ExecutorBehavior.LOOP;
 }
 
-export function getOutputKey(node: Node, iterationContext: IterationContext = []) {
-  return iterationContext.length > 0 ? `${node.id}_${iterationContext.join('_')}` : node.id;
+export function getOutputKey(node: Node, iterationContext: IterationContext = []): string {
+  return iterationContext.length ? `${node.id}_${iterationContext.join('_')}` : node.id;
 }

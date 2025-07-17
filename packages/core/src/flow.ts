@@ -4,12 +4,19 @@ import { Executor } from './types/executor';
 import { Node } from './types/node';
 import { isLoopNode } from './utils/node';
 
-export function getSubFlow(
-  loopNode: Node,
-  sortedNodes: Node[],
-  edges: Edge[],
-  executors: Executor<UnknowEnum>[] = []
-): {
+export interface GetSubFlowOptions<NodeType extends UnknowEnum> {
+  loopNode: Node<NodeType>;
+  sortedNodes: Node<NodeType>[];
+  edges: Edge[];
+  executors?: Executor<NodeType>[];
+}
+
+export function getSubFlow<NodeType extends UnknowEnum>({
+  loopNode,
+  sortedNodes,
+  edges,
+  executors = [],
+}: GetSubFlowOptions<NodeType>): {
   subFlowNodes: Node[];
   resumeNodes: Node[];
 } {
@@ -20,16 +27,14 @@ export function getSubFlow(
   function dfs(current: Node) {
     visited.add(current.id);
 
-    const childEdges = edges.filter((e) => e.source === current.id);
-
-    for (const edge of childEdges) {
+    for (const edge of edges.filter((e) => e.source === current.id)) {
       const child = sortedNodes.find((n) => n.id === edge.target);
       if (!child || visited.has(child.id)) continue;
 
       subFlowNodes.push(child);
-      dfs(child);
 
       if (!isLoopNode(child, executors)) {
+        dfs(child);
         resumeNodes.push(child);
       }
     }
@@ -37,12 +42,8 @@ export function getSubFlow(
 
   dfs(loopNode);
 
-  const sortedOrderMap = new Map(sortedNodes.map((node, index) => [node.id, index]));
+  const indexOf = new Map(sortedNodes.map((n, i) => [n.id, i]));
+  subFlowNodes.sort((a, b) => indexOf.get(a.id)! - indexOf.get(b.id)!);
 
-  return {
-    subFlowNodes: subFlowNodes.sort((a, b) => {
-      return (sortedOrderMap.get(a.id) || 0) - (sortedOrderMap.get(b.id) || 0);
-    }),
-    resumeNodes,
-  };
+  return { subFlowNodes, resumeNodes };
 }

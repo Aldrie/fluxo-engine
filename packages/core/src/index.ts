@@ -1,20 +1,19 @@
 export * from './flow';
 
+export * from './types/context';
 export * from './types/edge';
-export * from './types/enums/ValueTypes';
 export * from './types/enums/ExecutorBehavior';
+export * from './types/enums/ValueTypes';
 export * from './types/executor';
 export * from './types/flow';
 export * from './types/node';
-export * from './types/value';
-export * from './types/context';
 export * from './types/snapshot';
+export * from './types/value';
 
-import getLogger, { setIsLoggerEnabled } from './logger';
-import { executeNode, getInitialNodeIds, getNextNode, getSortedNodes } from './node';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-
+import { ConvertValuesToObject, Value } from './types/value';
 import { ValueTypes } from './types/enums/ValueTypes';
+
 import {
   Flow,
   FlowExecutionResult,
@@ -22,10 +21,11 @@ import {
   FlowHandlerOptions,
   ResumeFlowOptions,
 } from './types/flow';
-import { ExecutionSnapshot } from './types/snapshot';
-import { ConvertValuesToObject, Value } from './types/value';
-import { mapToObject, objectToMap } from './utils/map';
+
+import { objectToMap } from './utils/map';
 import { FluxoWaitSignal } from './wait-signal';
+import getLogger, { setIsLoggerEnabled } from './logger';
+import { executeNode, getInitialNodeIds, getNextNode, getSortedNodes } from './node';
 
 const log = getLogger('Index');
 
@@ -45,12 +45,23 @@ export async function executeFlow<NodeType extends UnknowEnum>({
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
   const sortedNodes = getSortedNodes(nodes, edges, executors);
-  log('sortedNodes', sortedNodes);
   const initialNodeIds = forcedInitialNodeIds ?? getInitialNodeIds(sortedNodes, edges);
+
+  log('sortedNodes', sortedNodes);
+  log('initialNodeIds', initialNodeIds);
 
   for (const nodeId of initialNodeIds) {
     const node = nodeMap.get(nodeId)!;
-    await executeNode(node, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
+
+    await executeNode({
+      node,
+      edges,
+      executors,
+      sortedNodes,
+      executedNodeOutputs,
+      initialNodeIds,
+      iterationContext: [],
+    });
   }
 }
 
@@ -75,10 +86,7 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
       if (error instanceof FluxoWaitSignal) {
         return {
           status: FlowExecutionStatus.WAITING,
-          snapshot: error.snapshot || {
-            executedNodeOutputs: {},
-            pending: [],
-          },
+          snapshot: error.snapshot ?? { executedNodeOutputs: {}, pending: [] },
         };
       }
 
@@ -94,37 +102,71 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
   }: ResumeFlowOptions<NodeType>): Promise<FlowExecutionResult> {
     const executedNodeOutputs = objectToMap(snapshot.executedNodeOutputs);
 
-    executedNodeOutputs.set(resolved.nodeId, resolved.output);
-
     const pendingEntry = snapshot.pending.find((p) => p.nodeId === resolved.nodeId);
-    const iterationContext: number[] = pendingEntry?.iteration || [];
+    const iterationContext = pendingEntry?.iteration ?? [];
+
+    const key =
+      iterationContext.length > 0
+        ? `${resolved.nodeId}_${iterationContext.join('_')}`
+        : resolved.nodeId;
+
+    executedNodeOutputs.set(key, resolved.output);
+
+    if (iterationContext.length) {
+      const agg = Array.isArray(executedNodeOutputs.get(resolved.nodeId))
+        ? [...(executedNodeOutputs.get(resolved.nodeId) as any[])]
+        : [];
+
+      agg[iterationContext.at(-1)!] = resolved.output;
+      executedNodeOutputs.set(resolved.nodeId, agg as any);
+    }
+
+    snapshot.pending = snapshot.pending.filter((p) => p !== pendingEntry);
 
     const sortedNodes = getSortedNodes(nodes, edges, executors);
+    const waitNode = nodes.find((n) => n.id === resolved.nodeId)!;
 
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const waitNode = nodeMap.get(resolved.nodeId)!;
-
-    const nextNode = getNextNode(
-      waitNode,
-      sortedNodes,
+    const nextNode = getNextNode({
+      node: waitNode,
+      edges,
       executors,
+      sortedNodes,
       executedNodeOutputs,
-      iterationContext.at(-1)
-    );
+      initialNodeIds: [],
+      iterationContext,
+    });
 
     if (nextNode) {
-      await executeNode(
-        nextNode,
+      await executeNode({
+        node: nextNode,
         edges,
         executors,
         sortedNodes,
         executedNodeOutputs,
-        [],
-        iterationContext
-      );
+        initialNodeIds: [],
+        iterationContext,
+      });
     }
 
-    return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
+    try {
+      await executeFlow({
+        executors,
+        nodes,
+        edges,
+        executedNodeOutputs,
+      });
+
+      return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
+    } catch (error) {
+      if (error instanceof FluxoWaitSignal) {
+        return {
+          status: FlowExecutionStatus.WAITING,
+          snapshot: error.snapshot ?? { executedNodeOutputs: {}, pending: [] },
+        };
+      }
+
+      throw error;
+    }
   }
 
   return { execute, resume };
