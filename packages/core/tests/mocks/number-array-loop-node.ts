@@ -16,18 +16,18 @@ export class NumberArrayLoopExecutor implements LoopNodeExecutor<NodeType> {
   behavior = ExecutorBehavior.LOOP as const;
 
   async getArray(
-    _input: any,
-    data: NumberArrayLoopNode['data']
+    input: any,
+    data: NumberArrayLoopNode['data'] = {} as any
   ): Promise<NumberArrayLoopNode['output'][]> {
-    const result = data.array.map((array) =>
-      array.reduce(
-        (acc, curr, index) => ({
-          ...acc,
-          [`num${index}`]: curr,
-        }),
-        {}
-      )
-    );
+    const source: any[] = data.array ?? input.num0 ?? [];
+
+    const result = source.map((item: any) => {
+      if (Array.isArray(item)) {
+        return item.reduce((acc, curr, index) => ({ ...acc, [`num${index}`]: curr }), {});
+      }
+
+      return { num0: item };
+    });
 
     return result;
   }

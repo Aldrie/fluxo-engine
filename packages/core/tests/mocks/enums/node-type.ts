@@ -5,4 +5,6 @@ export enum NodeType {
   OBJECT_ARRAY_LOOP = 'object-array-loop',
   SAVE_OUTPUT = 'save-output',
   GREATER_THAN = 'greater-than',
+  VALUE_IS = 'value-is',
+  WAIT_FOREVER = 'wait_forever',
 }
