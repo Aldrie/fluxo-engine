@@ -1,6 +1,6 @@
 {
   "name": "fluxo-engine",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "description": "A flexible, modular, fast, and lightweight workflow engine",
   "private": true,
   "workspaces": [
