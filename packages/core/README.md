@@ -156,7 +156,7 @@ enum NodeTypes {
 // Define flow handler with your executors (you can mix function-based and class-based)
 const flowHandler = getFlowHandler({
   executors: [simpleNodeExecutor, numberArrayLoopExecutor, greaterThanNodeExecutor],
-  enableLogger: true,
+  enableLogger: false,
 });
 
 // Define nodes

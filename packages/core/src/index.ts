@@ -11,10 +11,12 @@ export * from './types/snapshot';
 export * from './types/value';
 
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-import { ConvertValuesToObject, Value } from './types/value';
 import { ValueTypes } from './types/enums/ValueTypes';
+import { ConvertValuesToObject, Value } from './types/value';
 
 import {
+  BuildExecutionContextCacheOptions,
+  ExecuteFlowOptions,
   Flow,
   FlowExecutionResult,
   FlowExecutionStatus,
@@ -22,32 +24,82 @@ import {
   ResumeFlowOptions,
 } from './types/flow';
 
-import { objectToMap } from './utils/map';
-import { FluxoWaitSignal } from './wait-signal';
+import { isBranchEdge } from './edge';
 import getLogger, { setIsLoggerEnabled } from './logger';
 import { executeNode, getInitialNodeIds, getNextNode, getSortedNodes } from './node';
+import { BranchEdge, Edge } from './types/edge';
+import { Executor } from './types/executor';
+import { objectToMap } from './utils/map';
+import { FluxoWaitSignal } from './wait-signal';
+import { ExecutionContextCache } from './types/context';
+import { Node } from './types/node';
 
 const log = getLogger('Index');
 
-export async function executeFlow<NodeType extends UnknowEnum>({
-  executors,
+export function buildExecutionContextCache<NodeType extends UnknowEnum>({
   nodes,
   edges,
+  executors,
+}: BuildExecutionContextCacheOptions<NodeType>): ExecutionContextCache<NodeType> {
+  const sortedNodes = getSortedNodes(nodes, edges, executors);
+  const nodeIndexMap = new Map(sortedNodes.map((n, i) => [n.id, i]));
+
+  const executorByType = new Map<NodeType, Executor<NodeType>>(
+    executors?.map((e) => [e.type, e] as const)
+  );
+
+  const inputEdgesMap = new Map<string, Edge[]>();
+
+  for (const e of edges) {
+    if (!isBranchEdge(e)) {
+      const arr = inputEdgesMap.get(e.target) ?? [];
+      arr.push(e);
+      inputEdgesMap.set(e.target, arr);
+    }
+  }
+
+  const outputEdgesMap = new Map<string, Edge[]>();
+  const branchEdgesMap = new Map<string, BranchEdge[]>();
+
+  for (const e of edges) {
+    if (isBranchEdge(e)) {
+      const arr = branchEdgesMap.get(e.source) ?? [];
+      arr.push(e as BranchEdge);
+      branchEdgesMap.set(e.source, arr);
+    } else {
+      const arr = outputEdgesMap.get(e.source) ?? [];
+      arr.push(e);
+      outputEdgesMap.set(e.source, arr);
+    }
+  }
+
+  return {
+    executorByType,
+    inputEdgesMap,
+    nodeIndexMap,
+    sortedNodes: sortedNodes as Node<NodeType>[],
+    outputEdgesMap,
+    branchEdgesMap,
+  };
+}
+
+export async function executeFlow<NodeType extends UnknowEnum>({
+  nodes,
+  edges,
+  executors,
   executedNodeOutputs,
   initialNodeIds: forcedInitialNodeIds,
-}: Flow<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>> &
-  FlowHandlerOptions<NodeType> & {
-    executedNodeOutputs: ExecutedNodeOutputs;
-  }) {
+  executionContextCache,
+}: ExecuteFlowOptions<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>>) {
   log('nodes', nodes);
   log('edges', edges);
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
-  const sortedNodes = getSortedNodes(nodes, edges, executors);
-  const initialNodeIds = forcedInitialNodeIds ?? getInitialNodeIds(sortedNodes, edges);
+  const initialNodeIds =
+    forcedInitialNodeIds ?? getInitialNodeIds(executionContextCache?.sortedNodes, edges);
 
-  log('sortedNodes', sortedNodes);
+  log('sortedNodes', executionContextCache?.sortedNodes);
   log('initialNodeIds', initialNodeIds);
 
   for (const nodeId of initialNodeIds) {
@@ -57,10 +109,10 @@ export async function executeFlow<NodeType extends UnknowEnum>({
       node,
       edges,
       executors,
-      sortedNodes,
       executedNodeOutputs,
       initialNodeIds,
       iterationContext: [],
+      ...executionContextCache,
     });
   }
 }
@@ -79,8 +131,20 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
   }: Flow<NodeType, ConvertValuesToObject<InitialData>>): Promise<FlowExecutionResult> {
     const executedNodeOutputs: ExecutedNodeOutputs = new Map();
 
+    const executionContextCache = buildExecutionContextCache({
+      nodes,
+      edges,
+      executors,
+    });
+
     try {
-      await executeFlow({ executors, nodes, edges, executedNodeOutputs });
+      await executeFlow({
+        executors,
+        nodes,
+        edges,
+        executedNodeOutputs,
+        executionContextCache,
+      });
       return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
     } catch (error) {
       if (error instanceof FluxoWaitSignal) {
@@ -123,17 +187,22 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
 
     snapshot.pending = snapshot.pending.filter((p) => p !== pendingEntry);
 
-    const sortedNodes = getSortedNodes(nodes, edges, executors);
+    const executionContextCache = buildExecutionContextCache({
+      nodes,
+      edges,
+      executors,
+    });
+
     const waitNode = nodes.find((n) => n.id === resolved.nodeId)!;
 
     const nextNode = getNextNode({
       node: waitNode,
       edges,
       executors,
-      sortedNodes,
       executedNodeOutputs,
       initialNodeIds: [],
       iterationContext,
+      ...executionContextCache,
     });
 
     if (nextNode) {
@@ -141,10 +210,10 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
         node: nextNode,
         edges,
         executors,
-        sortedNodes,
         executedNodeOutputs,
         initialNodeIds: [],
         iterationContext,
+        ...executionContextCache,
       });
     }
 
@@ -154,6 +223,7 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
         nodes,
         edges,
         executedNodeOutputs,
+        executionContextCache,
       });
 
       return { status: FlowExecutionStatus.COMPLETED, snapshot: null };

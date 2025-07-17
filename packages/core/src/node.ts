@@ -1,9 +1,9 @@
-import { isBranchEdge } from './edge';
+import { isBranchEdge, mapNodeOutputsToInput } from './edge';
 import { getSubFlow } from './flow';
 import getLogger from './logger';
 import { FluxoWaitSignal } from './wait-signal';
 
-import { IterationContext } from './types/context';
+import { ExecutionContext, IterationContext } from './types/context';
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { BranchEdge, Edge } from './types/edge';
 import { ExecutorBehavior } from './types/enums/ExecutorBehavior';
@@ -17,23 +17,12 @@ import {
   WaitExecutor,
 } from './types/executor';
 
-import { getOutputKey, isLoopNode } from './utils/node';
-import { isObjectEmpty } from './utils/object';
-import { mapToObject } from './utils/map';
-import { ExecutionSnapshot, PendingWait } from './types/snapshot';
 import { FlowExecutionStatus } from './types/flow';
+import { ExecutionSnapshot, PendingWait } from './types/snapshot';
+import { mapToObject } from './utils/map';
+import { getOutputKey, isLoopNode } from './utils/node';
 
 const log = getLogger('Node');
-
-export interface ExecutionContext<NodeType extends UnknowEnum> {
-  node: Node<NodeType>;
-  edges: Edge[];
-  executors: Executor<NodeType>[];
-  sortedNodes: Node<NodeType>[];
-  executedNodeOutputs: ExecutedNodeOutputs;
-  initialNodeIds: string[];
-  iterationContext?: IterationContext;
-}
 
 interface NonLoopOptions<NodeType extends UnknowEnum> extends ExecutionContext<NodeType> {
   currentExecutor: NodeExecutor<NodeType>;
@@ -130,44 +119,6 @@ export function getInitialNodeIds<NodeType extends UnknowEnum>(
     .map((node) => node.id);
 }
 
-function getOutputForEdge(
-  aggregatedOutput: any,
-  sourceValue: string | undefined,
-  iteration?: number
-) {
-  if (Array.isArray(aggregatedOutput)) {
-    const index =
-      iteration !== undefined && iteration < aggregatedOutput.length
-        ? iteration
-        : aggregatedOutput.length - 1;
-    return aggregatedOutput[index]?.[sourceValue || ''] ?? null;
-  }
-
-  return aggregatedOutput?.[sourceValue || ''];
-}
-
-function mapNodeOutputsToInput(
-  edges: Edge[],
-  node: Node,
-  executedNodes: ExecutedNodeOutputs,
-  iteration?: number
-) {
-  const inputEdges = edges.filter((e) => e.target === node.id && !isBranchEdge(e));
-  const input = {} as typeof node.input;
-
-  for (const edge of inputEdges) {
-    const agg = executedNodes.get(edge.source);
-    const effectiveIteration = Array.isArray(agg) ? (iteration ?? agg.length - 1) : undefined;
-    const value = getOutputForEdge(agg, edge.sourceValue, effectiveIteration);
-    if (value === undefined) {
-      throw new Error(`No output for ${edge.source} (iter=${iteration}) key="${edge.sourceValue}"`);
-    }
-    input[edge.targetValue || ''] = value;
-  }
-
-  return isObjectEmpty(input) ? node.defaultInput || {} : input;
-}
-
 function isSkipped(out: any) {
   return !!out && typeof out === 'object' && out.skipped === true;
 }
@@ -177,7 +128,7 @@ export async function executeNonLoopNode<NodeType extends UnknowEnum>(
 ): Promise<any> {
   const {
     node,
-    edges,
+    inputEdgesMap,
     currentExecutor,
     executedNodeOutputs,
     initialNodeIds,
@@ -188,7 +139,9 @@ export async function executeNonLoopNode<NodeType extends UnknowEnum>(
 
   let iterationCount: number | undefined;
 
-  for (const e of edges.filter((e) => e.target === node.id)) {
+  const inEdges = inputEdgesMap!.get(node.id) ?? [];
+
+  for (const e of inEdges) {
     const out = executedNodeOutputs.get(e.source);
     if (Array.isArray(out)) {
       iterationCount = out.length;
@@ -200,7 +153,12 @@ export async function executeNonLoopNode<NodeType extends UnknowEnum>(
     const agg: any[] = [];
 
     for (let i = 0; i < iterationCount; i++) {
-      const input = mapNodeOutputsToInput(edges, node, executedNodeOutputs, i);
+      const input = mapNodeOutputsToInput({
+        node,
+        inputEdgesMap,
+        executedNodeOutputs,
+        iteration: i,
+      });
       const out = await currentExecutor.execute(input, node.data);
 
       agg.push(out);
@@ -219,7 +177,12 @@ export async function executeNonLoopNode<NodeType extends UnknowEnum>(
     return agg;
   }
 
-  const input = mapNodeOutputsToInput(edges, node, executedNodeOutputs, iter);
+  const input = mapNodeOutputsToInput({
+    node,
+    inputEdgesMap,
+    executedNodeOutputs,
+    iteration: iter,
+  });
   const output = await currentExecutor.execute(input, node.data);
 
   if (iter !== undefined) {
@@ -249,13 +212,14 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
 ): Promise<any> {
   const {
     node,
-    edges,
+    inputEdgesMap,
     currentExecutor,
     sortedNodes,
     executedNodeOutputs,
     iterationContext = [],
     executors,
-    initialNodeIds,
+    outputEdgesMap,
+    nodeIndexMap,
   } = opts;
 
   const prefix = `[LOOP ${node.id}]`;
@@ -277,7 +241,13 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
     return executedNodeOutputs.get(node.id);
   }
 
-  const input = mapNodeOutputsToInput(edges, node, executedNodeOutputs, iterationContext.at(-1));
+  const input = mapNodeOutputsToInput({
+    node,
+    inputEdgesMap,
+    executedNodeOutputs,
+    iteration: iterationContext.at(-1),
+  });
+
   const arr = await currentExecutor.getArray(input, node.data, iterationContext.at(-1));
   if (!Array.isArray(arr)) throw new Error('Loop must return an array');
 
@@ -287,8 +257,9 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
   const { subFlowNodes } = getSubFlow({
     loopNode: node,
     sortedNodes,
-    edges,
     executors,
+    outputEdgesMap,
+    nodeIndexMap,
   });
 
   const bodyIds = new Set(subFlowNodes.map((n) => n.id));
@@ -307,20 +278,16 @@ export async function executeLoopNode<NodeType extends UnknowEnum>(
       continue;
     }
 
-    const ctx = [...iterationContext, i];
+    const newIterationContext = [...iterationContext, i];
 
     executedNodeOutputs.set(iterKey(i), arr[i]);
     log(`${prefix} iter ${i} start`);
 
     for (const child of childExecNodes) {
       const res = await executeNode({
+        ...opts,
         node: child,
-        edges,
-        executors,
-        sortedNodes,
-        executedNodeOutputs,
-        initialNodeIds,
-        iterationContext: ctx,
+        iterationContext: newIterationContext,
       });
 
       if (res?.status === FlowExecutionStatus.WAITING) {
@@ -344,15 +311,24 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
   const {
     node,
     edges,
+    inputEdgesMap,
     currentExecutor,
     sortedNodes,
     executedNodeOutputs,
     iterationContext = [],
+    branchEdgesMap,
   } = opts;
+
+  const branchOuts = branchEdgesMap!.get(node.id) ?? [];
 
   const iter = iterationContext.at(-1);
 
-  const input = mapNodeOutputsToInput(edges, node, executedNodeOutputs, iter);
+  const input = mapNodeOutputsToInput({
+    node,
+    inputEdgesMap,
+    executedNodeOutputs,
+    iteration: iter,
+  });
 
   let decision: boolean;
 
@@ -375,16 +351,14 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
 
   const branchKey = decision ? currentExecutor.getTrueKey() : currentExecutor.getFalseKey();
 
-  const nextEdge = edges.find(
-    (e) => isBranchEdge(e) && e.source === node.id && e.branch === branchKey
-  );
+  const nextEdge = branchOuts.find((e) => e.branch === branchKey);
 
   const outputKey = getOutputKey(node, iterationContext);
 
   if (!nextEdge) {
     executedNodeOutputs.set(outputKey, { result: decision, executedBranch: true });
 
-    for (const be of edges.filter((e) => e.source === node.id && isBranchEdge(e)) as BranchEdge[]) {
+    for (const be of branchOuts) {
       const skipKey = iter !== undefined ? `${be.target}_${iter}` : be.target;
       executedNodeOutputs.set(skipKey, { skipped: true });
     }
@@ -401,7 +375,7 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
     executedNodeOutputs.set(node.id, branchOutput);
   }
 
-  for (const be of edges.filter((e) => e.source === node.id && isBranchEdge(e)) as BranchEdge[]) {
+  for (const be of branchOuts) {
     if (be.branch !== branchKey) {
       const key = iter !== undefined ? `${be.target}_${iter}` : be.target;
       executedNodeOutputs.set(key, { skipped: true });
@@ -417,7 +391,7 @@ export async function executeWaitNode<NodeType extends UnknowEnum>(
 ): Promise<any> {
   const {
     node,
-    edges,
+    inputEdgesMap,
     executor,
     executedNodeOutputs,
     initialNodeIds,
@@ -426,7 +400,12 @@ export async function executeWaitNode<NodeType extends UnknowEnum>(
   } = opts;
 
   try {
-    const input = mapNodeOutputsToInput(edges, node, executedNodeOutputs, iterationContext.at(-1));
+    const input = mapNodeOutputsToInput({
+      node,
+      inputEdgesMap,
+      executedNodeOutputs,
+      iteration: iterationContext.at(-1),
+    });
     const output = await executor.execute(input, node.data);
 
     executedNodeOutputs.set(key, output);
@@ -457,9 +436,9 @@ export async function executeWaitNode<NodeType extends UnknowEnum>(
 export async function executeNode<NodeType extends UnknowEnum>(
   context: ExecutionContext<NodeType>
 ): Promise<any> {
-  const { node, executors, executedNodeOutputs, iterationContext = [] } = context;
+  const { node, executedNodeOutputs, iterationContext = [], executorByType } = context;
 
-  const executor = executors.find((e) => e.type === node.type);
+  const executor = executorByType!.get(node.type);
   if (!executor) throw new Error(`No executor for ${node.type}`);
 
   log(`executing ${node.id}`, iterationContext);
@@ -542,7 +521,14 @@ export async function executeNode<NodeType extends UnknowEnum>(
 export function getNextNode<NodeType extends UnknowEnum>(
   context: ExecutionContext<NodeType>
 ): Node<NodeType> | undefined {
-  const { currentNode, sortedNodes, executors, executedNodeOutputs, iterationContext } = {
+  const {
+    currentNode,
+    sortedNodes,
+    nodeIndexMap,
+    executedNodeOutputs,
+    iterationContext,
+    executorByType,
+  } = {
     currentNode: context.node,
     ...context,
   };
@@ -572,7 +558,7 @@ export function getNextNode<NodeType extends UnknowEnum>(
     return undefined;
   }
 
-  const currentExecutor = executors.find((e) => e.type === currentNode.type);
+  const currentExecutor = executorByType!.get(currentNode.type);
   const currentOutput = executedNodeOutputs.get(currentNode.id);
 
   if (
@@ -585,7 +571,7 @@ export function getNextNode<NodeType extends UnknowEnum>(
     return undefined;
   }
 
-  const currentIndex = sortedNodes.indexOf(currentNode);
+  const currentIndex = nodeIndexMap!.get(currentNode.id)!;
 
   for (let i = currentIndex + 1; i < sortedNodes.length; i++) {
     const next = sortedNodes[i];

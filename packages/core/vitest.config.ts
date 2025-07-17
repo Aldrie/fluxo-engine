@@ -7,5 +7,8 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
+    outputFile: {
+      html: './html/index.html',
+    },
   },
 });

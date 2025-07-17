@@ -14,7 +14,7 @@ let flow: ReturnType<typeof getFlowHandler>;
 beforeAll(() => {
   out = new OutputServiceMock();
   flow = getFlowHandler<NodeType>({
-    enableLogger: true,
+    enableLogger: false,
     executors: [
       new ValueExecutor(),
       new NumberArrayLoopExecutor(),

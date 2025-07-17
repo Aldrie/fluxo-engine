@@ -18,7 +18,7 @@ beforeAll(() => {
       new ObjectArrayLoopExecutor(),
       new SaveOutputExecutor(outputServiceMock),
     ],
-    enableLogger: true,
+    enableLogger: false,
   }) as ReturnType<typeof getFlowHandler>;
 });
 

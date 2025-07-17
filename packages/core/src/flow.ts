@@ -1,21 +1,22 @@
+import { ExecutionContextCache } from './types/context';
 import { UnknowEnum } from './types/core';
-import { Edge } from './types/edge';
 import { Executor } from './types/executor';
 import { Node } from './types/node';
 import { isLoopNode } from './utils/node';
 
-export interface GetSubFlowOptions<NodeType extends UnknowEnum> {
+export interface GetSubFlowOptions<NodeType extends UnknowEnum>
+  extends Pick<ExecutionContextCache<NodeType>, 'outputEdgesMap' | 'nodeIndexMap'> {
   loopNode: Node<NodeType>;
   sortedNodes: Node<NodeType>[];
-  edges: Edge[];
   executors?: Executor<NodeType>[];
 }
 
 export function getSubFlow<NodeType extends UnknowEnum>({
   loopNode,
   sortedNodes,
-  edges,
   executors = [],
+  outputEdgesMap,
+  nodeIndexMap,
 }: GetSubFlowOptions<NodeType>): {
   subFlowNodes: Node[];
   resumeNodes: Node[];
@@ -27,8 +28,10 @@ export function getSubFlow<NodeType extends UnknowEnum>({
   function dfs(current: Node) {
     visited.add(current.id);
 
-    for (const edge of edges.filter((e) => e.source === current.id)) {
-      const child = sortedNodes.find((n) => n.id === edge.target);
+    const outEdges = outputEdgesMap.get(current.id) ?? [];
+    for (const edge of outEdges) {
+      const idx = nodeIndexMap.get(edge.target)!;
+      const child = sortedNodes[idx];
       if (!child || visited.has(child.id)) continue;
 
       subFlowNodes.push(child);
@@ -42,8 +45,7 @@ export function getSubFlow<NodeType extends UnknowEnum>({
 
   dfs(loopNode);
 
-  const indexOf = new Map(sortedNodes.map((n, i) => [n.id, i]));
-  subFlowNodes.sort((a, b) => indexOf.get(a.id)! - indexOf.get(b.id)!);
+  subFlowNodes.sort((a, b) => nodeIndexMap.get(a.id)! - nodeIndexMap.get(b.id)!);
 
   return { subFlowNodes, resumeNodes };
 }

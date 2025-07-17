@@ -1,14 +1,28 @@
-import { UnknowEnum } from './core';
+import { ExecutionContextCache } from './context';
+import { ExecutedNodeOutputs, UnknowEnum } from './core';
 import { Edge } from './edge';
 import { Executor } from './executor';
 import { Node } from './node';
 import { ExecutionSnapshot } from './snapshot';
 
-export interface Flow<NodeTypes = UnknowEnum, InitalData = unknown> {
-  nodes: Node<NodeTypes>[];
+export interface BuildExecutionContextCacheOptions<NodeType extends UnknowEnum> {
+  nodes: Node<NodeType>[];
+  edges: Edge[];
+  executors: Executor<NodeType>[];
+}
+
+export interface Flow<NodeType extends UnknowEnum, InitalData = unknown> {
+  nodes: Node<NodeType>[];
   edges: Edge[];
   initialData?: InitalData;
   initialNodeIds?: string[];
+}
+
+export interface ExecuteFlowOptions<NodeType extends UnknowEnum, InitalData = unknown>
+  extends Flow<NodeType, InitalData> {
+  executors: Executor<NodeType>[];
+  executedNodeOutputs: ExecutedNodeOutputs;
+  executionContextCache: ExecutionContextCache<NodeType>;
 }
 
 export interface ResumeFlowOptions<NodeTypes = UnknowEnum> {

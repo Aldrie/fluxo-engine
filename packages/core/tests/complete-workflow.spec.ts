@@ -23,7 +23,7 @@ beforeAll(() => {
       new WaitForeverExecutor(),
       new SaveOutputExecutor(outputService),
     ],
-    enableLogger: true,
+    enableLogger: false,
   }) as any;
 });
 
@@ -136,7 +136,7 @@ describe('complete workflow with wait + loop + aggregation + branch', () => {
           new WaitForeverExecutor(),
           new SaveOutputExecutor(outputService),
         ],
-        enableLogger: true,
+        enableLogger: false,
       }) as any;
 
       snapshot = undefined;
@@ -219,7 +219,7 @@ describe('complete workflow with wait + loop + aggregation + branch', () => {
           new WaitForeverExecutor(),
           new SaveOutputExecutor(outputService),
         ],
-        enableLogger: true,
+        enableLogger: false,
       });
 
       await expect(brokenHandler.execute({ nodes, edges })).rejects.toThrow('boom');
