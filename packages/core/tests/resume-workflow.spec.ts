@@ -18,6 +18,7 @@ let snapshot: ExecutionSnapshot;
 beforeAll(() => {
   outputService = new OutputServiceMock();
   flowHandler = getFlowHandler<any>({
+    enableLogger: true,
     executors: [
       new ValueExecutor(),
       new WaitForeverExecutor(),
@@ -53,7 +54,7 @@ describe('wait-and-resume workflow', () => {
       nodes,
       edges,
       snapshot,
-      resolved: { nodeId: 'wait', output: { value: 42 } },
+      resolved: [{ nodeId: 'wait', output: { value: 42 } }],
     });
     expect(resumeResult.status).toBe(FlowExecutionStatus.COMPLETED);
     expect(outputService.getOutput('final')).toStrictEqual([42]);
@@ -69,7 +70,7 @@ describe('wait-and-resume workflow', () => {
       nodes,
       edges,
       snapshot: delayedSnapshot,
-      resolved: { nodeId: 'wait', output: { value: 99 } },
+      resolved: [{ nodeId: 'wait', output: { value: 99 } }],
     });
     expect(delayedResume.status).toBe(FlowExecutionStatus.COMPLETED);
     expect(outputService.getOutput('final')).toStrictEqual([42, 99]);

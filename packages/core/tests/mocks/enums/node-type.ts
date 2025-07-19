@@ -6,5 +6,6 @@ export enum NodeType {
   SAVE_OUTPUT = 'save-output',
   GREATER_THAN = 'greater-than',
   VALUE_IS = 'value-is',
-  WAIT_FOREVER = 'wait_forever',
+  WAIT_FOREVER = 'wait-forever',
+  DELAYED_SUM = 'delayed-sum',
 }

@@ -19,11 +19,22 @@ export interface ExecuteFlowOptions<NodeType extends UnknowEnum, InitalData = un
   executionContextCache: ExecutionContextCache<NodeType>;
 }
 
+export interface ResolvedNode {
+  nodeId: string;
+  output: any;
+  iterationContext?: number[];
+}
+
+export interface ResumeEntry {
+  nodeId: string;
+  iterationContext: number[];
+}
+
 export interface ResumeFlowOptions<NodeTypes = UnknowEnum> {
   nodes: Node<NodeTypes>[];
   edges: Edge[];
   snapshot: ExecutionSnapshot;
-  resolved: { nodeId: string; output: any };
+  resolved: ResolvedNode[];
 }
 
 export interface FlowHandlerOptions<NodeType extends UnknowEnum> {

@@ -3,8 +3,8 @@ import { UnknowEnum } from '../types/core';
 import { BranchEdge, Edge } from '../types/edge';
 import { Executor } from '../types/executor';
 import { Node } from '../types/node';
-import { isBranchEdge } from '../utils/edge-mapping';
-import { getSortedNodes } from '../utils/graph';
+import { isBranchEdge } from './edge-mapping';
+import { getSortedNodes } from './graph';
 
 interface BuildExecutionContextCacheOptions<NodeType extends UnknowEnum> {
   nodes: Node<NodeType>[];

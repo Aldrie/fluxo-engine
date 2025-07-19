@@ -9,18 +9,18 @@ export * from './types/flow';
 export * from './types/node';
 export * from './types/snapshot';
 export * from './types/value';
+export * from './execution/flow';
 
-import { buildExecutionContextCache } from './execution/execution-context';
-import { executeNode } from './execution/node';
-import { runFlow } from './execution/flow';
+import { resumeFlow, executeFlow } from './execution/flow';
 
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
 import { ValueTypes } from './types/enums/ValueTypes';
 import { ConvertValuesToObject, Value } from './types/value';
 import { Flow, FlowExecutionResult, FlowHandlerOptions, ResumeFlowOptions } from './types/flow';
 
+import { buildExecutionContextCache } from './utils/execution-context';
 import { objectToMap } from './utils/map';
-import { getNextNode } from './utils/node';
+import { buildResumeEntries } from './utils/resume-entries';
 
 import { setIsLoggerEnabled } from './logger';
 
@@ -44,7 +44,7 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
       executors,
     });
 
-    return runFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
+    return executeFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
   }
 
   async function resume({
@@ -55,58 +55,23 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
   }: ResumeFlowOptions<NodeType>): Promise<FlowExecutionResult> {
     const executedNodeOutputs = objectToMap(snapshot.executedNodeOutputs);
 
-    const pendingEntry = snapshot.pending.find((p) => p.nodeId === resolved.nodeId);
-    const iterationContext = pendingEntry?.iteration ?? [];
+    const resumeEntries = buildResumeEntries({
+      resolved,
+      snapshot,
+      executedNodeOutputs,
+    });
 
-    const key =
-      iterationContext.length > 0
-        ? `${resolved.nodeId}_${iterationContext.join('_')}`
-        : resolved.nodeId;
+    const executionContextCache = buildExecutionContextCache({ nodes, edges, executors });
 
-    executedNodeOutputs.set(key, resolved.output);
-
-    if (iterationContext.length) {
-      const agg = Array.isArray(executedNodeOutputs.get(resolved.nodeId))
-        ? [...(executedNodeOutputs.get(resolved.nodeId) as any[])]
-        : [];
-
-      agg[iterationContext.at(-1)!] = resolved.output;
-      executedNodeOutputs.set(resolved.nodeId, agg as any);
-    }
-
-    snapshot.pending = snapshot.pending.filter((p) => p !== pendingEntry);
-
-    const executionContextCache = buildExecutionContextCache({
+    return resumeFlow({
       nodes,
       edges,
+      snapshot,
       executors,
-    });
-
-    const waitNode = nodes.find((n) => n.id === resolved.nodeId)!;
-
-    const nextNode = getNextNode({
-      node: waitNode,
-      edges,
-      executors,
+      executionContextCache,
       executedNodeOutputs,
-      initialNodeIds: [],
-      iterationContext,
-      ...executionContextCache,
+      resumeEntries,
     });
-
-    if (nextNode) {
-      await executeNode({
-        node: nextNode,
-        edges,
-        executors,
-        executedNodeOutputs,
-        initialNodeIds: [],
-        iterationContext,
-        ...executionContextCache,
-      });
-    }
-
-    return runFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
   }
 
   return { execute, resume };

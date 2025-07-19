@@ -1,17 +1,25 @@
 import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import getLogger from '../logger';
-import { executeNode } from './node';
 import { ExecutionContextCache } from '../types/context';
 import { ExecutedNodeOutputs, UnknowEnum } from '../types/core';
 import { Edge } from '../types/edge';
 import { ValueTypes } from '../types/enums/ValueTypes';
-import { ExecuteFlowOptions, FlowExecutionResult, FlowExecutionStatus } from '../types/flow';
+import {
+  ExecuteFlowOptions,
+  FlowExecutionResult,
+  FlowExecutionStatus,
+  ResumeEntry,
+} from '../types/flow';
+import { ExecutionSnapshot } from '../types/snapshot';
 import { ConvertValuesToObject, Value } from '../types/value';
 import { getInitialNodeIds } from '../utils/graph';
+import { mapToObject } from '../utils/map';
+import { getNextNode } from '../utils/node';
+import { executeNode } from './node';
 
 const log = getLogger('FlowHandler');
 
-export async function executeFlow<NodeType extends UnknowEnum>({
+async function execute<NodeType extends UnknowEnum>({
   nodes,
   edges,
   executors,
@@ -45,7 +53,7 @@ export async function executeFlow<NodeType extends UnknowEnum>({
   }
 }
 
-export async function runFlow<NodeType extends UnknowEnum>(
+export async function executeFlow<NodeType extends UnknowEnum>(
   executors: any[],
   nodes: any[],
   edges: Edge[],
@@ -53,7 +61,7 @@ export async function runFlow<NodeType extends UnknowEnum>(
   executionContextCache: ExecutionContextCache<NodeType>
 ): Promise<FlowExecutionResult> {
   try {
-    await executeFlow({
+    await execute({
       executors,
       nodes,
       edges,
@@ -70,4 +78,71 @@ export async function runFlow<NodeType extends UnknowEnum>(
     }
     throw error;
   }
+}
+
+interface ResumeFlowOptions<NodeType extends UnknowEnum>
+  extends Omit<
+    ExecuteFlowOptions<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>>,
+    'initialNodeIds' | 'initialData'
+  > {
+  resumeEntries: ResumeEntry[];
+  snapshot: ExecutionSnapshot;
+}
+
+export async function resumeFlow<NodeType extends UnknowEnum>({
+  nodes,
+  edges,
+  executors,
+  executedNodeOutputs,
+  executionContextCache,
+  resumeEntries,
+  snapshot,
+}: ResumeFlowOptions<NodeType>): Promise<FlowExecutionResult> {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  const resolvedKeys = new Set(
+    resumeEntries.map((r) => `${r.nodeId}|${r.iterationContext.join(',')}`)
+  );
+
+  for (const { nodeId, iterationContext } of resumeEntries) {
+    const waitNode = nodeMap.get(nodeId)!;
+
+    const next = getNextNode({
+      node: waitNode,
+      edges,
+      executors,
+      executedNodeOutputs,
+      initialNodeIds: [],
+      iterationContext,
+      ...executionContextCache,
+    });
+
+    if (next) {
+      await executeNode({
+        node: next,
+        edges,
+        executors,
+        executedNodeOutputs,
+        initialNodeIds: [],
+        iterationContext,
+        ...executionContextCache,
+      });
+    }
+  }
+
+  const newPending = snapshot.pending.filter(
+    (p) => !resolvedKeys.has(`${p.nodeId}|${p.iteration.join(',')}`)
+  );
+
+  if (newPending.length > 0) {
+    return {
+      status: FlowExecutionStatus.WAITING,
+      snapshot: {
+        executedNodeOutputs: mapToObject(executedNodeOutputs),
+        pending: newPending,
+      },
+    };
+  }
+
+  return { status: FlowExecutionStatus.COMPLETED, snapshot: null };
 }
