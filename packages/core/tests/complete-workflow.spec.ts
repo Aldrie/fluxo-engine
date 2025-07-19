@@ -21,7 +21,7 @@ beforeAll(() => {
       new GreaterThanNodeExecutor(),
       new SaveOutputExecutor(outputServiceMock),
     ],
-    enableLogger: true,
+    enableLogger: false,
   }) as ReturnType<typeof getFlowHandler>;
 });
 

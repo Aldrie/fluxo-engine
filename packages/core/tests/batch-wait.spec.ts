@@ -25,7 +25,7 @@ describe('batch wait workflow', () => {
         new WaitForeverExecutor(),
         new SaveOutputExecutor(outputService),
       ],
-      enableLogger: true,
+      enableLogger: false,
     }) as ReturnType<typeof getFlowHandler>;
   });
 

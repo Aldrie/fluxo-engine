@@ -164,7 +164,7 @@ import { getFlowHandler, FlowExecutionStatus } from '@fluxo-engine/core';
 
 const handler = getFlowHandler({
   executors: [simpleNodeExecutor, numberArrayLoopExecutor, greaterThanNodeExecutor, new WaitForeverExecutor()],
-  enableLogger: true,
+  enableLogger: false,
 });
 
 const result = await handler.execute({ nodes, edges });
@@ -220,7 +220,7 @@ enum NodeTypes {
 // Define flow handler with your executors (you can mix function-based and class-based)
 const flowHandler = getFlowHandler({
   executors: [simpleNodeExecutor, numberArrayLoopExecutor, greaterThanNodeExecutor],
-  enableLogger: true,
+  enableLogger: false,
 });
 
 // Define nodes

@@ -18,7 +18,7 @@ let snapshot: ExecutionSnapshot;
 beforeAll(() => {
   outputService = new OutputServiceMock();
   flowHandler = getFlowHandler<any>({
-    enableLogger: true,
+    enableLogger: false,
     executors: [
       new ValueExecutor(),
       new WaitForeverExecutor(),
