@@ -36,7 +36,7 @@ export async function executeWaitNode<NodeType extends UnknowEnum>(
       executedNodeOutputs,
       iteration: iterationContext.at(-1),
     });
-    const output = await executor.execute(input, node.data);
+    const output = await executor.execute(input, node.data, {});
 
     executedNodeOutputs.set(key, output);
 
