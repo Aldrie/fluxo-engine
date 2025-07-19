@@ -58,7 +58,6 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
     const resumeEntries = buildResumeEntries({
       resolved,
       snapshot,
-      executedNodeOutputs,
     });
 
     const executionContextCache = buildExecutionContextCache({ nodes, edges, executors });

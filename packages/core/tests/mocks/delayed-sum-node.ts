@@ -7,9 +7,10 @@ export interface DelayedSumNode {
     num0: number;
     num1: number;
   };
-  data: {
-    delay: boolean;
-  };
+}
+
+export interface DelayedSumNodeResumeData {
+  resolveExecution?: boolean;
 }
 
 export class DelayedSumExecutor extends WaitExecutor<NodeType> {
@@ -17,9 +18,10 @@ export class DelayedSumExecutor extends WaitExecutor<NodeType> {
 
   async execute(
     input: DelayedSumNode['input'],
-    data?: DelayedSumNode['data']
+    data: any,
+    resumeData: DelayedSumNodeResumeData
   ): Promise<{ result: number }> {
-    if (data?.delay) this.stopExecution();
+    if (!resumeData?.resolveExecution) this.stopExecution();
     return { result: input.num0 + input.num1 };
   }
 }

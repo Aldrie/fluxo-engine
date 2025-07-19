@@ -1,6 +1,6 @@
 import { ConvertValuesToObject, Edge, Flow, FlowExecutionStatus, getFlowHandler } from '../src';
 import { NodeType } from './mocks/enums/node-type';
-import { DelayedSumExecutor } from './mocks/delayed-sum-node'; // novo executor aqui!
+import { DelayedSumExecutor, DelayedSumNodeResumeData } from './mocks/delayed-sum-node'; // novo executor aqui!
 import { NumberArrayLoopExecutor } from './mocks/number-array-loop-node';
 import { GreaterThanNodeExecutor } from './mocks/greater-than-node';
 import { SaveOutputExecutor } from './mocks/save-output-node';
@@ -108,9 +108,21 @@ describe('complete workflow: loop + delayed sum + branch', () => {
       edges,
       snapshot,
       resolved: [
-        { nodeId: 'delayedSum', iterationContext: [0], output: { result: 13 } },
-        { nodeId: 'delayedSum', iterationContext: [1], output: { result: 17 } },
-        { nodeId: 'delayedSum', iterationContext: [2], output: { result: 21 } },
+        {
+          nodeId: 'delayedSum',
+          iterationContext: [0],
+          resumeData: { resolveExecution: true } satisfies DelayedSumNodeResumeData,
+        },
+        {
+          nodeId: 'delayedSum',
+          iterationContext: [1],
+          resumeData: { resolveExecution: true } satisfies DelayedSumNodeResumeData,
+        },
+        {
+          nodeId: 'delayedSum',
+          iterationContext: [2],
+          resumeData: { resolveExecution: true } satisfies DelayedSumNodeResumeData,
+        },
       ],
     });
 

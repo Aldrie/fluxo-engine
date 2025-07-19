@@ -29,7 +29,11 @@ export abstract class WaitExecutor<Enum extends UnknowEnum> implements BaseExecu
   abstract type: Enum;
   behavior = ExecutorBehavior.WAIT as const;
 
-  abstract execute(input: Node['input'], data: Node['data']): Promise<Node['output']>;
+  abstract execute(
+    input: Node['input'],
+    data: Node['data'],
+    resumeData: Record<string, unknown>
+  ): Promise<Node['output']>;
 
   protected stopExecution(): never {
     throw new FluxoWaitSignalException();

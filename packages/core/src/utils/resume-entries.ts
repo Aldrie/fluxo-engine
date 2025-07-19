@@ -1,10 +1,9 @@
-import { ResolvedNode } from '../types/flow';
+import { ResolvedNode, ResumeEntry } from '../types/flow';
 import { ExecutionSnapshot } from '../types/snapshot';
 
 interface BuildResumeEntriesOptions {
   resolved: ResolvedNode[];
   snapshot: ExecutionSnapshot;
-  executedNodeOutputs: Map<string, any>;
 }
 
 function sameIter(a: number[], b: number[]) {
@@ -16,13 +15,8 @@ function sameIter(a: number[], b: number[]) {
 export function buildResumeEntries({
   resolved,
   snapshot,
-  executedNodeOutputs,
-}: {
-  resolved: ResolvedNode[];
-  snapshot: ExecutionSnapshot;
-  executedNodeOutputs: Map<string, any>;
-}): { nodeId: string; iterationContext: number[] }[] {
-  return resolved.map(({ nodeId, output, iterationContext }) => {
+}: BuildResumeEntriesOptions): ResumeEntry[] {
+  return resolved.map(({ nodeId, iterationContext, resumeData }) => {
     let iter = Array.isArray(iterationContext) ? iterationContext : [];
 
     if (iter.length === 0) {
@@ -40,17 +34,6 @@ export function buildResumeEntries({
       if (idx >= 0) snapshot.pending.splice(idx, 1);
     }
 
-    const key = iter.length ? `${nodeId}_${iter.join('_')}` : nodeId;
-    executedNodeOutputs.set(key, output);
-
-    if (iter.length) {
-      const existing = executedNodeOutputs.get(nodeId);
-      const agg = Array.isArray(existing) ? [...existing] : [];
-      const lastIdx = iter[iter.length - 1];
-      agg[lastIdx] = output;
-      executedNodeOutputs.set(nodeId, agg);
-    }
-
-    return { nodeId, iterationContext: iter };
+    return { nodeId, iterationContext: iter, resumeData };
   });
 }

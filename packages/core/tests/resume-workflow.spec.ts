@@ -9,7 +9,7 @@ import { NodeType } from './mocks/enums/node-type';
 import { OutputServiceMock } from './mocks/output-service';
 import { SaveOutputExecutor } from './mocks/save-output-node';
 import { ValueExecutor } from './mocks/value-node';
-import { WaitForeverExecutor } from './mocks/wait-node';
+import { WaitForeverExecutor, WaitForeverNodeResumeData } from './mocks/wait-node';
 
 let flowHandler: ReturnType<typeof getFlowHandler>;
 let outputService: OutputServiceMock;
@@ -54,7 +54,15 @@ describe('wait-and-resume workflow', () => {
       nodes,
       edges,
       snapshot,
-      resolved: [{ nodeId: 'wait', output: { value: 42 } }],
+      resolved: [
+        {
+          nodeId: 'wait',
+          resumeData: {
+            resolveExecution: true,
+            output: { value: 42 },
+          } satisfies WaitForeverNodeResumeData,
+        },
+      ],
     });
     expect(resumeResult.status).toBe(FlowExecutionStatus.COMPLETED);
     expect(outputService.getOutput('final')).toStrictEqual([42]);
@@ -70,7 +78,15 @@ describe('wait-and-resume workflow', () => {
       nodes,
       edges,
       snapshot: delayedSnapshot,
-      resolved: [{ nodeId: 'wait', output: { value: 99 } }],
+      resolved: [
+        {
+          nodeId: 'wait',
+          resumeData: {
+            resolveExecution: true,
+            output: { value: 99 },
+          } satisfies WaitForeverNodeResumeData,
+        },
+      ],
     });
     expect(delayedResume.status).toBe(FlowExecutionStatus.COMPLETED);
     expect(outputService.getOutput('final')).toStrictEqual([42, 99]);

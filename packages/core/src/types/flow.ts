@@ -21,14 +21,11 @@ export interface ExecuteFlowOptions<NodeType extends UnknowEnum, InitalData = un
 
 export interface ResolvedNode {
   nodeId: string;
-  output: any;
+  resumeData: Record<string, unknown>;
   iterationContext?: number[];
 }
 
-export interface ResumeEntry {
-  nodeId: string;
-  iterationContext: number[];
-}
+export type ResumeEntry = ResolvedNode;
 
 export interface ResumeFlowOptions<NodeTypes = UnknowEnum> {
   nodes: Node<NodeTypes>[];
