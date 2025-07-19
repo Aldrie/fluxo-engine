@@ -200,7 +200,7 @@ A **flow** consists of nodes and edges defining the execution order. **Edges** n
 
 #### **Example Flow:**
 
-<img src="../../docs/example-flow.svg" alt="Example Flow" />
+<img src="https://raw.githubusercontent.com/Aldrie/fluxo-engine/main/docs/example-flow.svg" alt="Example Flow" />
 
 #### **Edge Mapping:**  
 The edge will connect the `result` handle of the "sum" node to the `number` handle of the "number_to_string" node:
