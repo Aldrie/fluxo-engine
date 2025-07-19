@@ -1,6 +1,6 @@
 import { ConvertValuesToObject, Edge, Flow, FlowExecutionStatus, getFlowHandler } from '../src';
 import { NodeType } from './mocks/enums/node-type';
-import { DelayedSumExecutor, DelayedSumNodeResumeData } from './mocks/delayed-sum-node'; // novo executor aqui!
+import { DelayedSumExecutor, DelayedSumNodeResumeData } from './mocks/delayed-sum-node';
 import { NumberArrayLoopExecutor } from './mocks/number-array-loop-node';
 import { GreaterThanNodeExecutor } from './mocks/greater-than-node';
 import { SaveOutputExecutor } from './mocks/save-output-node';

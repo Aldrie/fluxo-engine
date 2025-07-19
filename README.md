@@ -149,7 +149,7 @@ import { NodeTypes } from './types';
 export class WaitForeverExecutor extends WaitExecutor<NodeTypes> {
   type: NodeTypes.WAIT_FOREVER;
 
-  async execute(_input: any) {
+  async execute(_input: any, _data: any, resumeData: any) {
     // Pause the workflow here
     this.stopExecution();
     return {};
@@ -181,8 +181,16 @@ if (result.status === FlowExecutionStatus.WAITING) {
 await handler.resume({
   nodes,
   edges,
-  snapshot,  // the stored snapshot
-  resolved: { nodeId: 'waitNodeId', output: { foo: 'bar' } },
+  snapshot,  
+  resolved: [
+    {
+      nodeId: 'waitNodeId',            // the id of the wait‐node you’re resuming
+      resumeData: {                    // whatever data your WaitExecutor needs to continue
+        resolveExecution: true,
+      },
+      iterationContext: [],            // if it was inside a loop, put its iteration index here
+    },
+  ],
 });
 ```
 
