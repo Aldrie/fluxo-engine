@@ -1,4 +1,5 @@
 import { UnknowEnum } from './core';
+import { FluxoWaitSignalException } from '../exceptions/wait-signal-exception';
 import { ExecutorBehavior } from './enums/ExecutorBehavior';
 import { Node } from './node';
 
@@ -24,7 +25,23 @@ export interface BranchExecutor<Enum extends UnknowEnum> extends BaseExecutor<En
   getFalseKey(): string;
 }
 
+export abstract class WaitExecutor<Enum extends UnknowEnum> implements BaseExecutor<Enum> {
+  abstract type: Enum;
+  behavior = ExecutorBehavior.WAIT as const;
+
+  abstract execute(
+    input: Node['input'],
+    data: Node['data'],
+    resumeData: Record<string, unknown>
+  ): Promise<Node['output']>;
+
+  protected stopExecution(): never {
+    throw new FluxoWaitSignalException();
+  }
+}
+
 export type Executor<Enum extends UnknowEnum> =
   | LoopNodeExecutor<Enum>
   | NodeExecutor<Enum>
-  | BranchExecutor<Enum>;
+  | BranchExecutor<Enum>
+  | WaitExecutor<Enum>;

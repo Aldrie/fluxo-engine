@@ -1,13 +1,13 @@
 {
   "name": "fluxo-engine",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "description": "A flexible, modular, fast, and lightweight workflow engine",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "lint": "eslint --fix",
+    "lint": "pnpm --filter @fluxo-engine/* run lint",
     "dev": "pnpm --filter @fluxo-engine/* run dev",
     "build": "pnpm --filter @fluxo-engine/* run build",
     "test": "pnpm --filter @fluxo-engine/* run test",
@@ -37,6 +37,7 @@
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.18",
     "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.2.3",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.1.0",

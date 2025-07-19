@@ -1,10 +1,11 @@
+import { faker } from '@faker-js/faker';
+
 import { ConvertValuesToObject, Flow, getFlowHandler } from '../src';
 import { NodeType } from './mocks/enums/node-type';
 import { ObjectArrayLoopExecutor } from './mocks/object-array-loop-node';
 import { OutputServiceMock } from './mocks/output-service';
 import { SaveOutputExecutor } from './mocks/save-output-node';
 import { ValueExecutor } from './mocks/value-node';
-import { faker } from '@faker-js/faker';
 
 let outputServiceMock: OutputServiceMock;
 let flowHandler: ReturnType<typeof getFlowHandler>;
@@ -18,6 +19,7 @@ beforeAll(() => {
       new ObjectArrayLoopExecutor(),
       new SaveOutputExecutor(outputServiceMock),
     ],
+    enableLogger: false,
   }) as ReturnType<typeof getFlowHandler>;
 });
 

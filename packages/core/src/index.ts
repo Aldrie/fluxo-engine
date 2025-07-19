@@ -1,43 +1,28 @@
-export * from './flow';
+export * from './utils/flow';
+
+export * from './types/context';
 export * from './types/edge';
-export * from './types/enums/ValueTypes';
 export * from './types/enums/ExecutorBehavior';
+export * from './types/enums/ValueTypes';
 export * from './types/executor';
 export * from './types/flow';
 export * from './types/node';
+export * from './types/snapshot';
 export * from './types/value';
-export * from './types/context';
+export * from './execution/flow';
 
-import getLogger, { setIsLoggerEnabled } from './logger';
-import { executeNode, getInitialNodeIds, getSortedNodes } from './node';
+import { resumeFlow, executeFlow } from './execution/flow';
+
 import { ExecutedNodeOutputs, UnknowEnum } from './types/core';
-
 import { ValueTypes } from './types/enums/ValueTypes';
-import { Flow, FlowHandlerOptions } from './types/flow';
 import { ConvertValuesToObject, Value } from './types/value';
+import { Flow, FlowExecutionResult, FlowHandlerOptions, ResumeFlowOptions } from './types/flow';
 
-const log = getLogger('Index');
+import { buildExecutionContextCache } from './utils/execution-context';
+import { objectToMap } from './utils/map';
+import { buildResumeEntries } from './utils/resume-entries';
 
-export async function executeFlow<NodeType extends UnknowEnum>({
-  executors,
-  nodes,
-  edges,
-  executedNodeOutputs,
-}: Flow<NodeType, ConvertValuesToObject<Value<string, ValueTypes>>> &
-  FlowHandlerOptions<NodeType> & {
-    executedNodeOutputs: ExecutedNodeOutputs;
-  }) {
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-  const sortedNodes = getSortedNodes(nodes, edges, executors);
-  log('sortedNodes', sortedNodes);
-  const initialNodeIds = getInitialNodeIds(sortedNodes, edges);
-
-  for (const nodeId of initialNodeIds) {
-    const node = nodeMap.get(nodeId)!;
-    await executeNode(node, edges, executors, sortedNodes, executedNodeOutputs, initialNodeIds);
-  }
-}
+import { setIsLoggerEnabled } from './logger';
 
 export function getFlowHandler<NodeType extends UnknowEnum>({
   executors,
@@ -47,12 +32,46 @@ export function getFlowHandler<NodeType extends UnknowEnum>({
 
   async function execute<
     InitialData extends Value<string, ValueTypes> = Value<string, ValueTypes>,
-  >({ nodes, edges }: Flow<NodeType, ConvertValuesToObject<InitialData>>) {
+  >({
+    nodes,
+    edges,
+  }: Flow<NodeType, ConvertValuesToObject<InitialData>>): Promise<FlowExecutionResult> {
     const executedNodeOutputs: ExecutedNodeOutputs = new Map();
-    log('nodes', nodes);
-    log('edges', edges);
-    await executeFlow({ executors, nodes, edges, executedNodeOutputs });
+
+    const executionContextCache = buildExecutionContextCache({
+      nodes,
+      edges,
+      executors,
+    });
+
+    return executeFlow(executors, nodes, edges, executedNodeOutputs, executionContextCache);
   }
 
-  return { execute };
+  async function resume({
+    nodes,
+    edges,
+    snapshot,
+    resolved,
+  }: ResumeFlowOptions<NodeType>): Promise<FlowExecutionResult> {
+    const executedNodeOutputs = objectToMap(snapshot.executedNodeOutputs);
+
+    const resumeEntries = buildResumeEntries({
+      resolved,
+      snapshot,
+    });
+
+    const executionContextCache = buildExecutionContextCache({ nodes, edges, executors });
+
+    return resumeFlow({
+      nodes,
+      edges,
+      snapshot,
+      executors,
+      executionContextCache,
+      executedNodeOutputs,
+      resumeEntries,
+    });
+  }
+
+  return { execute, resume };
 }

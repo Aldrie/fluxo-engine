@@ -1,31 +1,37 @@
-# **@fluxo-engine/core**  
+# **@fluxo-engine/core**
+
 *A flexible, modular, fast, and lightweight workflow engine.*
 
-Fluxo is a powerful framework designed for building and executing workflows using a node-based architecture. It enables seamless process automation by connecting nodes and edges (via handles), ensuring efficiency, scalability, and adaptability.
+Fluxo is a powerful framework for defining and executing workflows using a node‑and‑edge model. It supports custom behaviors (standard, loop, branch, wait), clear data mapping via handles, and full pause/resume capability—all with minimal overhead.
 
 See on [GitHub](https://github.com/Aldrie/fluxo).
 
-## **Features**  
+---
+
+## **Features**
+
 🧩 **Modular Execution** – Define custom executors for different node types.
 
-🔗 **Edge-Based Flow** – Nodes are connected via handles, specifying `sourceValue` and `targetValue` for mapping inputs and outputs.
+🔗 **Edge‑Based Flow** – Nodes are connected via handles (`sourceValue`/`targetValue`) for precise data mapping.
 
-🔄 **Loop Execution** – Special support for loop-based nodes where all child nodes execute in a loop.
+🔄 **Loop Execution** – Execute sub‑flows over arrays, with automatic aggregation and caching.
 
-🔀 **Branching Execution** – Define conditional branches that allow different execution paths.
+🔀 **Branching Execution** – Conditionally route execution through true/false branches.
 
-⚡️ **Lightweight & Fast** – Designed for performance with minimal overhead.
+⏸ **Pause & Resume** – Halt at wait nodes, snapshot state, and resume later.
 
-## **📦 Installation**  
-To install Fluxo, run:
+⚡️ **Lightweight & Fast** – Optimized for speed with minimal runtime overhead.
 
-```sh
+## **📦 Installation**
+
+```bash
 pnpm add @fluxo-engine/core
 ```
 
+
 ## **💡 Usage Examples**
 
-### **🔧 1. Function-Based Executors**
+### **🔧 1. Function‑Based Executors**
 
 #### **Standard Node Execution**
 
@@ -42,7 +48,7 @@ const simpleExecutor: NodeExecutor<NodeTypes> = {
 };
 ```
 
-### **🏗️ 2. Class-Based Executors**  
+### **🏗️ 2. Class‑Based Executors**
 
 You can also define executors as classes by implementing the respective interfaces.
 
@@ -65,7 +71,7 @@ class SimpleNodeExecutor implements NodeExecutor<NodeTypes> {
 export const simpleNodeExecutor = new SimpleNodeExecutor();
 ```
 
-### **🔄 3. Loop Execution with Behavior**  
+### **🔄 3. Loop Execution with Behavior**
 
 > **Note:** The `LoopExecutor` iterates over an array and executes all nodes within its loop hierarchy for each iteration.
 
@@ -130,7 +136,65 @@ class GreaterThanNodeExecutor implements BranchExecutor<NodeType> {
 export const greaterThanNodeExecutor = new GreaterThanNodeExecutor();
 ```
 
-### **🔄➡️ 5. Defining and Executing a Flow**
+## **⏸ 5. Pause & Resume with Wait Executors**
+
+Any executor can pause the flow by extending `WaitExecutor` and calling `this.stopExecution()`. Fluxo captures a snapshot of the entire execution state. Later, use `resume(...)` to continue from that exact point.
+
+#### **Creating a Wait Executor**
+
+```ts
+import { WaitExecutor } from '@fluxo-engine/core';
+import { NodeTypes } from './types';
+
+export class WaitForeverExecutor extends WaitExecutor<NodeTypes> {
+  type: NodeTypes.WAIT_FOREVER;
+
+  async execute(_input: any, _data: any, resumeData: any) {
+    // Pause the workflow here
+    this.stopExecution();
+    return {};
+  }
+}
+```
+
+#### **Running & Pausing**
+
+```ts
+import { getFlowHandler, FlowExecutionStatus } from '@fluxo-engine/core';
+
+const handler = getFlowHandler({
+  executors: [simpleNodeExecutor, numberArrayLoopExecutor, greaterThanNodeExecutor, new WaitForeverExecutor()],
+  enableLogger: false,
+});
+
+const result = await handler.execute({ nodes, edges });
+
+if (result.status === FlowExecutionStatus.WAITING) {
+  const snapshot = result.snapshot;
+  // store `snapshot` for later resumption
+}
+```
+
+#### **Resuming**
+
+```ts
+await handler.resume({
+  nodes,
+  edges,
+  snapshot,  
+  resolved: [
+    {
+      nodeId: 'waitNodeId',            // the id of the wait‐node you’re resuming
+      resumeData: {                    // whatever data your WaitExecutor needs to continue
+        resolveExecution: true,
+      },
+      iterationContext: [],            // if it was inside a loop, put its iteration index here
+    },
+  ],
+});
+```
+
+### **🔄➡️ 6. Defining and Executing a Flow**
 
 A **flow** consists of nodes and edges defining the execution order. **Edges** now include `sourceValue` and `targetValue` (handles) to map outputs of one node to inputs of another.
 
@@ -156,7 +220,7 @@ enum NodeTypes {
 // Define flow handler with your executors (you can mix function-based and class-based)
 const flowHandler = getFlowHandler({
   executors: [simpleNodeExecutor, numberArrayLoopExecutor, greaterThanNodeExecutor],
-  enableLogger: true,
+  enableLogger: false,
 });
 
 // Define nodes
@@ -203,22 +267,10 @@ await flowHandler.execute({ nodes, edges });
 
 ## **🚀 Why Use Fluxo?**
 
-- **Flexible:** Easily define any node behavior via custom executors.  
-- **Efficient:** Minimal overhead ensures fast execution of workflows.  
-- **Scalable:** Capable of handling both simple and complex workflow scenarios.  
-- **Precise Data Mapping:** Use handles (`sourceValue` and `targetValue`) to clearly define how outputs feed into inputs across nodes.  
-- **Branching & Looping:** Supports advanced execution flows with branching logic and iterative loops.
-
-## **Roadmap**
-
-- [ ] **📄 Enhanced Documentation**  
-  Improve documentation with more detailed guides, examples, and installation instructions.
-
-- [ ] **🦀 Rust Integration for Better Performance**  
-  Explore and integrate Rust modules to optimize critical parts of the engine and boost performance.
-
-- [x] **🔀 Branch Executors**
-
-  Implement branch executors to handle conditional execution paths.
+* **Flexible:** Easily define any node behavior via custom executors.
+* **Efficient:** Minimal overhead ensures fast execution of workflows.
+* **Scalable:** Handles both simple and complex workflow scenarios.
+* **Precise Data Mapping:** Explicit handles prevent ambiguity across nodes.
+* **Advanced Flows:** Native support for looping, branching, and pause/resume.
 
 <img src="https://media.tenor.com/sbfBfp3FeY8AAAAj/oia-uia.gif" width="100" alt="Fluxo Animation" />

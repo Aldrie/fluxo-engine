@@ -13,7 +13,7 @@ export class ObjectArrayLoopExecutor implements LoopNodeExecutor<NodeType> {
   behavior = ExecutorBehavior.LOOP as const;
 
   async getArray(input: ObjectArrayLoopNode['input']): Promise<any[]> {
-    const result = input.object_array.map((object) => object);
+    const result = (input?.object_array || []).map((object) => object);
     return result;
   }
 }
