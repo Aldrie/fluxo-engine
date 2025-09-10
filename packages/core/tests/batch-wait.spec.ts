@@ -150,7 +150,7 @@ describe('batch wait workflow', () => {
       resolved: [
         {
           nodeId: 'waitNode',
-          output: { value: randomUserId },
+          resumeData: { output: { value: randomUserId } },
           iterationContext: [randomIndex],
         },
       ],

@@ -14,7 +14,7 @@ let flow: ReturnType<typeof getFlowHandler>;
 beforeAll(() => {
   out = new OutputServiceMock();
   flow = getFlowHandler<NodeType>({
-    enableLogger: false,
+    enableLogger: true,
     executors: [
       new ValueExecutor(),
       new NumberArrayLoopExecutor(),
@@ -250,5 +250,74 @@ describe('mixed branch + loop workflow', () => {
     await flow.execute(make('single'));
     expect(out.getOutput('direct')).toStrictEqual(['direct']);
     expect(out.getOutput('saved')).toBeUndefined();
+  });
+});
+
+describe('branch with detached senders (post-branch normal nodes)', () => {
+  const build = (condition: boolean) => ({
+    nodes: [
+      { id: 'startValue', type: NodeType.VALUE, input: {}, output: {}, data: { value: condition } },
+
+      {
+        id: 'isTrue',
+        type: NodeType.VALUE_IS,
+        input: {},
+        output: {},
+        data: { valueToCompare: true },
+      },
+
+      {
+        id: 'templateTrue',
+        type: NodeType.VALUE,
+        input: {},
+        output: {},
+        data: { value: 'TRUE_BODY' },
+      },
+      {
+        id: 'templateFalse',
+        type: NodeType.VALUE,
+        input: {},
+        output: {},
+        data: { value: 'FALSE_BODY' },
+      },
+
+      {
+        id: 'sendTrue',
+        type: NodeType.SAVE_OUTPUT,
+        input: {},
+        output: {},
+        data: { key: 'mailTrue' },
+      },
+      {
+        id: 'sendFalse',
+        type: NodeType.SAVE_OUTPUT,
+        input: {},
+        output: {},
+        data: { key: 'mailFalse' },
+      },
+    ],
+    edges: [
+      { source: 'startValue', target: 'isTrue', sourceValue: 'value', targetValue: 'value' },
+
+      { source: 'isTrue', target: 'templateTrue', branch: 'true' },
+      { source: 'isTrue', target: 'templateFalse', branch: 'false' },
+
+      { source: 'templateTrue', target: 'sendTrue', sourceValue: 'value', targetValue: 'value' },
+      { source: 'templateFalse', target: 'sendFalse', sourceValue: 'value', targetValue: 'value' },
+    ],
+  });
+
+  it('quando condition=true: apenas sendTrue deve executar', async () => {
+    await flow.execute(build(true));
+    expect(out.getOutput('mailTrue')).toStrictEqual(['TRUE_BODY']);
+    expect(out.getOutput('mailFalse')).toBeUndefined();
+    out.clear();
+  });
+
+  it('quando condition=false: apenas sendFalse deve executar', async () => {
+    await flow.execute(build(false));
+    expect(out.getOutput('mailFalse')).toStrictEqual(['FALSE_BODY']);
+    expect(out.getOutput('mailTrue')).toBeUndefined();
+    out.clear();
   });
 });
