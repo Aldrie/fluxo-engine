@@ -14,7 +14,9 @@ export interface ValueNode {
 export class ValueExecutor implements NodeExecutor<NodeType> {
   type = NodeType.VALUE;
 
-  async execute(_input: any, data: ValueNode['data']) {
-    return data;
+  async execute(input: any, data: ValueNode['data']) {
+    const inputObj = input && typeof input === 'object' ? input : {};
+    const dataObj = data && typeof data === 'object' ? data : {};
+    return { ...dataObj, ...inputObj };
   }
 }

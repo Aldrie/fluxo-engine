@@ -80,6 +80,21 @@ export function getNextNode<NodeType extends UnknowEnum>(
       continue;
     }
 
+    const iterOut =
+      iteration !== undefined ? executedNodeOutputs.get(`${next.id}_${iteration}`) : undefined;
+
+    if (iterOut && (iterOut as any).skipped === true) {
+      log(`getNextNode: node "${next.id}" is marked as skipped for iter ${iteration}, ignoring.`);
+      continue;
+    }
+
+    if (iterOut !== undefined) {
+      log(
+        `getNextNode: node "${next.id}" already has per-iteration output for iter ${iteration}, ignoring.`
+      );
+      continue;
+    }
+
     if (
       iteration !== undefined &&
       executedNodeOutputs.get(`${next.id}_${iteration}`)?.branchHandled

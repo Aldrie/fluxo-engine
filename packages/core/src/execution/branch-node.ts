@@ -70,7 +70,6 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
     return decision;
   }
 
-  const nextNode = sortedNodes.find((n) => n.id === nextEdge.target)!;
   const branchOutput = { result: decision, executedBranch: true };
 
   if (iter !== undefined) {
@@ -86,6 +85,22 @@ export async function executeBranchNode<NodeType extends UnknowEnum>(
     }
   }
 
-  await resumeExecution({ ...opts, node: nextNode });
+  const targetNode = sortedNodes.find((n) => n.id === nextEdge.target)!;
+  const deps = (inputEdgesMap!.get(targetNode.id) ?? []).map((e) => e.source);
+
+  const firstUnresolvedDepId = deps.find((depId) => {
+    const baseOut = executedNodeOutputs.get(depId);
+    const iterKey = iter !== undefined ? `${depId}_${iter}` : null;
+    const iterOut = iterKey ? executedNodeOutputs.get(iterKey) : undefined;
+    return (iterOut ?? baseOut) === undefined;
+  });
+
+  if (firstUnresolvedDepId) {
+    const depNode = sortedNodes.find((n) => n.id === firstUnresolvedDepId)!;
+    await resumeExecution({ ...opts, node: depNode, iterationContext });
+  } else {
+    await resumeExecution({ ...opts, node: targetNode, iterationContext });
+  }
+
   return decision;
 }
